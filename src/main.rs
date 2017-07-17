@@ -6,6 +6,9 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate clap;
+use std::fs::File;
+use std::io::BufReader;
+use rss::Channel;
 
 mod actions;
 mod structs;
@@ -28,8 +31,23 @@ fn main() {
                 .arg(
                     Arg::with_name("PODCAST")
                         .help("Regex for subscribed podcast")
-                        //.required(true)
                         .index(1),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("play")
+                .about("list episodes of podcast")
+                .arg(
+                    Arg::with_name("PODCAST")
+                        .help("Regex for subscribed podcast")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("EPISODE")
+                        .help("Episode index")
+                        .required(true)
+                        .index(2),
                 ),
         )
         .subcommand(
@@ -63,6 +81,16 @@ fn main() {
                 Some(regex) => list_episodes(state, regex),
                 None => list_subscriptions(state),
             }
+        }
+        Some("play") => {
+            let play_matches = matches.subcommand_matches("play").unwrap();
+            let podcast = play_matches.value_of("PODCAST").unwrap();
+            let episode = play_matches.value_of("EPISODE").unwrap();
+            stream_episode(state, podcast, episode);
+            // let file = File::open("rss.xml").unwrap();
+            // let channel = Channel::read_from(BufReader::new(file)).unwrap();
+            // let ep = Episode::from(channel.items()[20].clone());
+            // stream_episode(ep);
         }
         Some("subscribe") => {
             state.subscribe(
