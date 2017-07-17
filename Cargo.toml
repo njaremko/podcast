@@ -4,4 +4,10 @@ version = "0.1.0"
 authors = ["njaremko <njaremko@gmail.com>"]
 
 [dependencies]
-rss = "0.7"
+serde = "1.0.10"
+serde_json = "1.0.2"
+regex = "0.2"
+serde_derive = "1.0.10"
+rss = {version = "0.7", features = ["from_url"] }
+reqwest = "0.7.1"
+clap = "2.25.0"
