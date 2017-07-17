@@ -1,0 +1,7 @@
+[package]
+name = "podcast"
+version = "0.1.0"
+authors = ["njaremko <njaremko@gmail.com>"]
+
+[dependencies]
+rss = "0.7"
