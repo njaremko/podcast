@@ -27,6 +27,33 @@ pub fn list_subscriptions(state: State) {
     }
 }
 
+pub fn download_episode(state: State, p_search: &str, e_search: &str) {
+    let re_pod = Regex::new(&p_search).unwrap();
+    let ep_num = e_search.parse::<usize>().unwrap();
+
+    for subscription in state.subscriptions() {
+        if re_pod.is_match(&subscription.name) {
+            let podcast = Podcast::from_url(&subscription.url).unwrap();
+            let episodes = podcast.episodes();
+            match episodes[episodes.len() - ep_num].download(podcast.title()) {
+                Err(err) => println!("{}", err),
+                _ => (),
+            }
+        }
+    }
+}
+
+pub fn download_all(state: State, p_search: &str) {
+    let re_pod = Regex::new(&p_search).unwrap();
+
+    for subscription in state.subscriptions() {
+        if re_pod.is_match(&subscription.name) {
+            let podcast = Podcast::from_url(&subscription.url).unwrap();
+            podcast.download();
+        }
+    }
+}
+
 pub fn stream_episode(state: State, p_search: &str, e_search: &str) {
     let re_pod = Regex::new(&p_search).unwrap();
     let ep_num = e_search.parse::<usize>().unwrap();

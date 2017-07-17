@@ -26,6 +26,17 @@ fn main() {
         .author("Nathan J. <njaremko@gmail.com>")
         .about("Does awesome things")
         .subcommand(
+            SubCommand::with_name("download")
+                .about("download episodes of podcast")
+                .arg(
+                    Arg::with_name("PODCAST")
+                        .help("Regex for subscribed podcast")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(Arg::with_name("EPISODE").help("Episode index").index(2)),
+        )
+        .subcommand(
             SubCommand::with_name("list")
                 .about("list episodes of podcast")
                 .arg(
@@ -75,6 +86,14 @@ fn main() {
         .get_matches();
 
     match matches.subcommand_name() {
+        Some("download") => {
+            let download_matches = matches.subcommand_matches("download").unwrap();
+            let podcast = download_matches.value_of("PODCAST").unwrap();
+            match download_matches.value_of("EPISODE") {
+                Some(ep) => download_episode(state, podcast, ep),
+                None => download_all(state, podcast),
+            }
+        }
         Some("list") => {
             let list_matches = matches.subcommand_matches("list").unwrap();
             match list_matches.value_of("PODCAST") {
@@ -87,10 +106,6 @@ fn main() {
             let podcast = play_matches.value_of("PODCAST").unwrap();
             let episode = play_matches.value_of("EPISODE").unwrap();
             stream_episode(state, podcast, episode);
-            // let file = File::open("rss.xml").unwrap();
-            // let channel = Channel::read_from(BufReader::new(file)).unwrap();
-            // let ep = Episode::from(channel.items()[20].clone());
-            // stream_episode(ep);
         }
         Some("subscribe") => {
             state.subscribe(

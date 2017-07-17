@@ -102,24 +102,9 @@ impl Podcast {
         result
     }
 
-    pub fn list_episodes(&self) -> Vec<&str> {
-        let mut result = Vec::new();
-
-        let items = self.0.items();
-        for item in items {
-            match item.title() {
-                Some(val) => result.push(val),
-                None => (),
-            }
-        }
-        result
-    }
-
     pub fn download(&self) {
         let mut path = get_podcast_dir();
         path.push(self.title());
-
-        DirBuilder::new().recursive(true).create(path).unwrap();
 
         let downloaded = already_downloaded(self.title());
 
@@ -165,6 +150,7 @@ impl Episode {
     pub fn download(&self, podcast_name: &str) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
         path.push(podcast_name);
+        DirBuilder::new().recursive(true).create(&path).unwrap();
 
         if let Some(url) = self.download_url() {
             if let Some(title) = self.title() {
@@ -172,7 +158,6 @@ impl Episode {
                 let mut filename = String::from(title);
                 filename.push_str(self.download_extension().unwrap());
                 path.push(filename);
-
                 let mut file = File::create(&path)?;
                 let mut resp = reqwest::get(url).unwrap();
                 let mut content: Vec<u8> = Vec::new();
