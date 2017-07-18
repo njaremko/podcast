@@ -1,22 +1,19 @@
-extern crate rss;
+extern crate clap;
 extern crate regex;
 extern crate reqwest;
+extern crate rss;
 extern crate serde;
-extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-extern crate clap;
-use std::fs::File;
-use std::io::BufReader;
-use rss::Channel;
+extern crate serde_json;
 
 mod actions;
 mod structs;
 mod utils;
 
 use actions::*;
-use structs::*;
 use clap::{Arg, App, SubCommand};
+use structs::*;
 
 fn main() {
     let mut state = State::new();

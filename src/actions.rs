@@ -1,6 +1,6 @@
 use regex::Regex;
+use std::process::Command;
 use structs::*;
-use std::process::{Command, Stdio};
 use utils::*;
 
 pub fn list_episodes(state: State, search: &str) {
@@ -67,7 +67,7 @@ pub fn play_episode(state: State, p_search: &str, ep_num_string: &str) {
             let episode = episodes[episodes.len() - ep_num].clone();
 
             let mut filename = String::from(episode.title().unwrap());
-            filename.push_str(episode.download_extension().unwrap());
+            filename.push_str(episode.extension().unwrap());
             path.push(filename);
             match path.exists() {
                 true => launch_mpv(path.to_str().unwrap()),

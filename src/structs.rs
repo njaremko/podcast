@@ -1,10 +1,10 @@
 use reqwest;
 use rss::{self, Channel, Item};
+use serde_json;
+use std::collections::BTreeSet;
 use std::fs::{DirBuilder, File};
 use std::io::{self, Read, Write};
 use utils::*;
-use serde_json;
-use std::collections::BTreeSet;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subscription {
@@ -135,7 +135,7 @@ impl Episode {
         }
     }
 
-    pub fn download_extension(&self) -> Option<&str> {
+    pub fn extension(&self) -> Option<&str> {
         match self.0.enclosure() {
             Some(enclosure) => {
                 match enclosure.mime_type() {
@@ -158,7 +158,7 @@ impl Episode {
             if let Some(title) = self.title() {
                 println!("Downloading: {}", title);
                 let mut filename = String::from(title);
-                filename.push_str(self.download_extension().unwrap());
+                filename.push_str(self.extension().unwrap());
                 path.push(filename);
                 let mut file = File::create(&path)?;
                 let mut resp = reqwest::get(url).unwrap();

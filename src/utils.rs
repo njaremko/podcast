@@ -1,7 +1,7 @@
-use std::fs;
-use std::path::PathBuf;
 use std::collections::BTreeSet;
 use std::env;
+use std::fs;
+use std::path::PathBuf;
 
 
 pub fn already_downloaded(dir: &str) -> BTreeSet<String> {
