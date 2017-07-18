@@ -21,7 +21,6 @@ pub fn list_episodes(state: &State, search: &str) {
                 }
                 Err(err) => println!("{}", err),
             }
-
         }
     }
 }
