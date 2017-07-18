@@ -1,3 +1,4 @@
+use actions::*;
 use reqwest;
 use rss::{self, Channel, Item};
 use serde_json;
@@ -5,7 +6,6 @@ use std::collections::BTreeSet;
 use std::fs::{DirBuilder, File};
 use std::io::{self, Read, Write};
 use utils::*;
-use actions::*;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subscription {

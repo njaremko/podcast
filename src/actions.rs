@@ -1,11 +1,11 @@
 use regex::Regex;
+use reqwest;
+use rss::Channel;
+use std::fs::{DirBuilder, File};
+use std::io::{Read, Write};
 use std::process::Command;
 use structs::*;
-use reqwest;
 use utils::*;
-use std::io::{Read, Write};
-use std::fs::{DirBuilder, File};
-use rss::Channel;
 
 pub fn list_episodes(state: &State, search: &str) {
     let re = Regex::new(search).unwrap();
@@ -79,12 +79,11 @@ pub fn download_all(state: &State, p_search: &str) {
 pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
     let re_pod = Regex::new(p_search).unwrap();
     let ep_num = ep_num_string.parse::<usize>().unwrap();
+    let mut path = get_podcast_dir();
+    path.push(".rss");
+    DirBuilder::new().recursive(true).create(&path).unwrap();
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.name) {
-            let mut path = get_podcast_dir();
-            path.push(".rss");
-            DirBuilder::new().recursive(true).create(&path).unwrap();
-
             let mut filename = String::from(subscription.name);
             filename.push_str(".xml");
             path.push(filename);
@@ -107,6 +106,7 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
             } else {
                 launch_mpv(episode.url().unwrap());
             }
+            return;
         }
     }
 }
