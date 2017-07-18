@@ -114,7 +114,7 @@ fn main() {
             )
         }
         Some("search") => (),
-        Some("update") => (),
+        Some("update") => update_rss(state),
         _ => (),
     }
 }

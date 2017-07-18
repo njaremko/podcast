@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use std::fs::{DirBuilder, File};
 use std::io::{self, Read, Write};
 use utils::*;
+use actions::*;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subscription {
@@ -44,6 +45,7 @@ impl State {
             Err(err) => println!("{}", err),
             _ => (),
         }
+        update_rss(self.clone());
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
