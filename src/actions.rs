@@ -7,8 +7,8 @@ use std::io::{Read, Write};
 use std::fs::{DirBuilder, File};
 use rss::Channel;
 
-pub fn list_episodes(state: State, search: &str) {
-    let re = Regex::new(&search).unwrap();
+pub fn list_episodes(state: &State, search: &str) {
+    let re = Regex::new(search).unwrap();
     for podcast in state.subscriptions() {
         if re.is_match(&podcast.name) {
             println!("Episodes for {}:", &podcast.name);
@@ -26,7 +26,7 @@ pub fn list_episodes(state: State, search: &str) {
     }
 }
 
-pub fn update_rss(state: State) {
+pub fn update_rss(state: &State) {
     let subs = state.subscriptions();
     for sub in subs {
         let mut path = get_podcast_dir();
@@ -44,30 +44,29 @@ pub fn update_rss(state: State) {
     }
 }
 
-pub fn list_subscriptions(state: State) {
+pub fn list_subscriptions(state: &State) {
     for podcast in state.subscriptions() {
         println!("{}", podcast.name);
     }
 }
 
-pub fn download_episode(state: State, p_search: &str, e_search: &str) {
-    let re_pod = Regex::new(&p_search).unwrap();
+pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
+    let re_pod = Regex::new(p_search).unwrap();
     let ep_num = e_search.parse::<usize>().unwrap();
 
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.name) {
             let podcast = Podcast::from_url(&subscription.url).unwrap();
             let episodes = podcast.episodes();
-            match episodes[episodes.len() - ep_num].download(podcast.title()) {
-                Err(err) => println!("{}", err),
-                _ => (),
+            if let Err(err) = episodes[episodes.len() - ep_num].download(podcast.title()) {
+                println!("{}", err);
             }
         }
     }
 }
 
-pub fn download_all(state: State, p_search: &str) {
-    let re_pod = Regex::new(&p_search).unwrap();
+pub fn download_all(state: &State, p_search: &str) {
+    let re_pod = Regex::new(p_search).unwrap();
 
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.name) {
@@ -77,8 +76,8 @@ pub fn download_all(state: State, p_search: &str) {
     }
 }
 
-pub fn play_episode(state: State, p_search: &str, ep_num_string: &str) {
-    let re_pod = Regex::new(&p_search).unwrap();
+pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
+    let re_pod = Regex::new(p_search).unwrap();
     let ep_num = ep_num_string.parse::<usize>().unwrap();
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.name) {
@@ -103,9 +102,10 @@ pub fn play_episode(state: State, p_search: &str, ep_num_string: &str) {
             path = get_podcast_dir();
             path.push(podcast.title());
             path.push(filename);
-            match path.exists() {
-                true => launch_mpv(path.to_str().unwrap()),
-                false => launch_mpv(episode.url().unwrap()),
+            if path.exists() {
+                launch_mpv(path.to_str().unwrap());
+            } else {
+                launch_mpv(episode.url().unwrap());
             }
         }
     }

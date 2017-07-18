@@ -87,22 +87,22 @@ fn main() {
             let download_matches = matches.subcommand_matches("download").unwrap();
             let podcast = download_matches.value_of("PODCAST").unwrap();
             match download_matches.value_of("EPISODE") {
-                Some(ep) => download_episode(state, podcast, ep),
-                None => download_all(state, podcast),
+                Some(ep) => download_episode(&state, podcast, ep),
+                None => download_all(&state, podcast),
             }
         }
         Some("list") => {
             let list_matches = matches.subcommand_matches("list").unwrap();
             match list_matches.value_of("PODCAST") {
-                Some(regex) => list_episodes(state, regex),
-                None => list_subscriptions(state),
+                Some(regex) => list_episodes(&state, regex),
+                None => list_subscriptions(&state),
             }
         }
         Some("play") => {
             let play_matches = matches.subcommand_matches("play").unwrap();
             let podcast = play_matches.value_of("PODCAST").unwrap();
             let episode = play_matches.value_of("EPISODE").unwrap();
-            play_episode(state, podcast, episode);
+            play_episode(&state, podcast, episode);
         }
         Some("subscribe") => {
             state.subscribe(
@@ -114,7 +114,7 @@ fn main() {
             )
         }
         Some("search") => (),
-        Some("update") => update_rss(state),
+        Some("update") => update_rss(&state),
         _ => (),
     }
 }

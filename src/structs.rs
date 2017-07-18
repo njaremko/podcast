@@ -41,11 +41,10 @@ impl State {
                 url: String::from(url),
             });
         }
-        match self.save() {
-            Err(err) => println!("{}", err),
-            _ => (),
+        if let Err(err) = self.save() {
+            println!("{}", err);
         }
-        update_rss(self.clone());
+        update_rss(&self.clone());
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
@@ -115,9 +114,8 @@ impl Podcast {
         for ep in self.episodes() {
             if let Some(ep_title) = ep.title() {
                 if !downloaded.contains(ep_title) {
-                    match ep.download(self.title()) {
-                        Err(err) => println!("{}", err),
-                        _ => (),
+                    if let Err(err) = ep.download(self.title()) {
+                        println!("{}", err);
                     }
                 }
             }
