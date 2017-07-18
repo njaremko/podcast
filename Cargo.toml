@@ -2,6 +2,8 @@
 name = "podcast"
 version = "0.1.0"
 authors = ["njaremko <njaremko@gmail.com>"]
+description = "A command line podcast player"
+license = "GPL-3.0"
 
 [dependencies]
 serde = "1.0.10"
