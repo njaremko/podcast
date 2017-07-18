@@ -60,8 +60,10 @@ impl State {
     }
 }
 
+#[derive(Clone)]
 pub struct Podcast(Channel);
 
+#[derive(Clone)]
 pub struct Episode(Item);
 
 impl From<Channel> for Podcast {
@@ -126,14 +128,14 @@ impl Episode {
         self.0.title()
     }
 
-    pub fn download_url(&self) -> Option<&str> {
+    pub fn url(&self) -> Option<&str> {
         match self.0.enclosure() {
             Some(val) => Some(val.url()),
             None => None,
         }
     }
 
-    fn download_extension(&self) -> Option<&str> {
+    pub fn download_extension(&self) -> Option<&str> {
         match self.0.enclosure() {
             Some(enclosure) => {
                 match enclosure.mime_type() {
@@ -152,7 +154,7 @@ impl Episode {
         path.push(podcast_name);
         DirBuilder::new().recursive(true).create(&path).unwrap();
 
-        if let Some(url) = self.download_url() {
+        if let Some(url) = self.url() {
             if let Some(title) = self.title() {
                 println!("Downloading: {}", title);
                 let mut filename = String::from(title);

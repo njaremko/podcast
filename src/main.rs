@@ -105,7 +105,7 @@ fn main() {
             let play_matches = matches.subcommand_matches("play").unwrap();
             let podcast = play_matches.value_of("PODCAST").unwrap();
             let episode = play_matches.value_of("EPISODE").unwrap();
-            stream_episode(state, podcast, episode);
+            play_episode(state, podcast, episode);
         }
         Some("subscribe") => {
             state.subscribe(
