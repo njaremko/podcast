@@ -53,6 +53,7 @@ impl State {
 
     pub fn save(&self) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
+        DirBuilder::new().recursive(true).create(&path).unwrap();
         path.push(".subscriptions");
         let serialized = serde_json::to_string(self)?;
         let mut file = File::create(&path)?;
