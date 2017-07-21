@@ -1,6 +1,6 @@
 [package]
 name = "podcast"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["njaremko <njaremko@gmail.com>"]
 description = "A command line podcast player"
 license = "GPL-3.0"

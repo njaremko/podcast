@@ -2,8 +2,8 @@ use regex::Regex;
 use reqwest;
 use rss::Channel;
 use std::fs::{DirBuilder, File};
-use std::io::{Read, Write};
-use std::process::Command;
+use std::io::{self, Read, Write};
+use std::process::{Command, ExitStatus};
 use structs::*;
 use utils::*;
 
@@ -101,18 +101,28 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
             path.push(podcast.title());
             path.push(filename);
             if path.exists() {
-                launch_mpv(path.to_str().unwrap());
+                if let Err(err) = launch_mpv(path.to_str().unwrap()) {
+                    handle_launch_mpv_error(err);
+                }
             } else {
-                launch_mpv(episode.url().unwrap());
+                if let Err(err) = launch_mpv(episode.url().unwrap()) {
+                    handle_launch_mpv_error(err);
+                }
             }
             return;
         }
     }
 }
 
-fn launch_mpv(url: &str) {
+fn launch_mpv(url: &str) -> io::Result<ExitStatus> {
     Command::new("mpv")
         .args(&["--audio-display=no", url])
         .status()
-        .expect("failed to execute process");
+}
+
+fn handle_launch_mpv_error(err: io::Error) {
+    match err.kind() {
+        io::ErrorKind::NotFound => eprintln!("mpv not found in PATH, is it installed?"),
+        _ => eprintln!("Error: {}", err),
+    }
 }
