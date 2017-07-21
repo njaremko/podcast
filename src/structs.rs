@@ -85,6 +85,7 @@ impl Podcast {
         self.0.title()
     }
 
+    #[allow(dead_code)]
     pub fn url(&self) -> &str {
         self.0.link()
     }
