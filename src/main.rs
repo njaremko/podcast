@@ -123,5 +123,7 @@ fn main() {
         Some("update") => update_rss(&state),
         _ => (),
     }
-    state.save();
+    if let Err(err) = state.save() {
+            eprintln!("{}", err);
+        }
 }

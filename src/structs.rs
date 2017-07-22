@@ -60,7 +60,7 @@ impl State {
             });
         }
         if let Err(err) = self.save() {
-            println!("{}", err);
+            eprintln!("{}", err);
         }
         // TODO only download new rss, don't refresh all
         update_rss(&self.clone());
