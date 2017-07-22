@@ -7,6 +7,9 @@
 - [x] Streaming podcasts
 - [x] Downloading podcasts 
 - [x] Playing podcasts
+- [ ] Auto-download
+- [ ] Auto-delete
+- [ ] Shell Completions
 - [ ] Searching for podcasts...(WIP)
 
 
