@@ -3,7 +3,7 @@ use reqwest;
 use rss::Channel;
 use std::fs::{DirBuilder, File};
 use std::io::{self, Read, Write};
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 use structs::*;
 use utils::*;
 
@@ -101,28 +101,41 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
             path.push(podcast.title());
             path.push(filename);
             if path.exists() {
-                if let Err(err) = launch_mpv(path.to_str().unwrap()) {
-                    handle_launch_mpv_error(err);
-                }
+                launch_player(path.to_str().unwrap());
             } else {
-                if let Err(err) = launch_mpv(episode.url().unwrap()) {
-                    handle_launch_mpv_error(err);
-                }
+                launch_player(episode.url().unwrap());
             }
             return;
         }
     }
 }
 
-fn launch_mpv(url: &str) -> io::Result<ExitStatus> {
-    Command::new("mpv")
-        .args(&["--audio-display=no", url])
-        .status()
+fn launch_player(url: &str)  {
+    if let Err(_) = launch_mpv(&url) {
+        launch_vlc(url)
+    }
 }
 
-fn handle_launch_mpv_error(err: io::Error) {
-    match err.kind() {
-        io::ErrorKind::NotFound => eprintln!("mpv not found in PATH, is it installed?"),
-        _ => eprintln!("Error: {}", err),
+fn launch_mpv(url: &str) -> Result<(), io::Error> {
+    if let Err(err) = Command::new("mpv").args(&["--audio-display=no", "--ytdl=no", url]).status() {
+        match err.kind() {
+            io::ErrorKind::NotFound => {
+                eprintln!("Couldn't open mpv\nTrying vlc...");
+                return Err(err);
+            },
+            _ => eprintln!("Error: {}", err),
+        }
+    }
+    Ok(())
+}
+
+fn launch_vlc(url: &str) {
+    if let Err(err) = Command::new("vlc").args(&["-I ncurses", url]).status() {
+        match err.kind() {
+            io::ErrorKind::NotFound => {
+                eprintln!("vlc not found in PATH\nAborting...");
+            },
+            _ => eprintln!("Error: {}", err),
+        }
     }
 }
