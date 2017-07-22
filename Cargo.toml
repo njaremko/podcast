@@ -1,12 +1,13 @@
 [package]
 name = "podcast"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["njaremko <njaremko@gmail.com>"]
 description = "A command line podcast player"
 license = "GPL-3.0"
 repository = "https://github.com/njaremko/podcast"
 
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
 clap = "2.25.0"
 rayon = "0.8.2"
 regex = "0.2"

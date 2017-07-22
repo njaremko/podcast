@@ -1,4 +1,5 @@
 use actions::*;
+use chrono::prelude::*;
 use rayon::prelude::*;
 use reqwest;
 use rss::{self, Channel, Item};
@@ -15,7 +16,10 @@ pub struct Subscription {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct State(Vec<Subscription>);
+pub struct State {
+    last_run_time: DateTime<Utc>,
+    subs: Vec<Subscription>,
+}
 
 impl State {
     pub fn new() -> State {
@@ -24,9 +28,22 @@ impl State {
         if path.exists() {
             let mut s = String::new();
             File::open(&path).unwrap().read_to_string(&mut s).unwrap();
-            serde_json::from_str(&s).unwrap()
+            let mut state: State = serde_json::from_str(&s).unwrap();
+            // Check if a day has passed (86400 seconds)
+            if state
+                .last_run_time
+                .signed_duration_since(Utc::now())
+                .num_seconds() < -86400
+            {
+                update_rss(&state.clone());
+            }
+            state.last_run_time = Utc::now();
+            state
         } else {
-            State(Vec::new())
+            State {
+                last_run_time: Utc::now(),
+                subs: Vec::new(),
+            }
         }
     }
 
@@ -37,7 +54,7 @@ impl State {
         }
         if !set.contains(url) {
             let channel = Channel::from_url(url).unwrap();
-            self.0.push(Subscription {
+            self.subs.push(Subscription {
                 name: String::from(channel.title()),
                 url: String::from(url),
             });
@@ -45,14 +62,17 @@ impl State {
         if let Err(err) = self.save() {
             println!("{}", err);
         }
+        // TODO only download new rss, don't refresh all
         update_rss(&self.clone());
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
-        self.0.clone()
+        self.subs.clone()
     }
 
     pub fn save(&self) -> Result<(), io::Error> {
+        // TODO write to a temp file and rename instead of overwriting
+
         let mut path = get_podcast_dir();
         DirBuilder::new().recursive(true).create(&path).unwrap();
         path.push(".subscriptions");

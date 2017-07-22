@@ -27,6 +27,7 @@ pub fn list_episodes(state: &State, search: &str) {
 }
 
 pub fn update_rss(state: &State) {
+    println!("Updating RSS feeds...");
     state.subscriptions().par_iter().for_each(|ref sub| {
         let mut path = get_podcast_dir();
         path.push(".rss");

@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate clap;
 extern crate rayon;
 extern crate regex;
@@ -122,4 +123,5 @@ fn main() {
         Some("update") => update_rss(&state),
         _ => (),
     }
+    state.save();
 }
