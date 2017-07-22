@@ -1,4 +1,5 @@
 use actions::*;
+use rayon::prelude::*;
 use reqwest;
 use rss::{self, Channel, Item};
 use serde_json;
@@ -113,15 +114,17 @@ impl Podcast {
 
         let downloaded = already_downloaded(self.title());
 
-        for ep in self.episodes() {
-            if let Some(ep_title) = ep.title() {
+        self.episodes().par_iter().for_each(
+            |ref i| if let Some(ep_title) =
+                i.title()
+            {
                 if !downloaded.contains(ep_title) {
-                    if let Err(err) = ep.download(self.title()) {
+                    if let Err(err) = i.download(self.title()) {
                         println!("{}", err);
                     }
                 }
-            }
-        }
+            },
+        );
     }
 }
 

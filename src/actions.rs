@@ -4,6 +4,7 @@ use rss::Channel;
 use std::fs::{DirBuilder, File};
 use std::io::{self, Read, Write};
 use std::process::Command;
+use rayon::prelude::*;
 use structs::*;
 use utils::*;
 
@@ -26,8 +27,7 @@ pub fn list_episodes(state: &State, search: &str) {
 }
 
 pub fn update_rss(state: &State) {
-    let subs = state.subscriptions();
-    for sub in subs {
+    state.subscriptions().par_iter().for_each(|ref sub| {
         let mut path = get_podcast_dir();
         path.push(".rss");
         DirBuilder::new().recursive(true).create(&path).unwrap();
@@ -40,12 +40,34 @@ pub fn update_rss(state: &State) {
         let mut content: Vec<u8> = Vec::new();
         resp.read_to_end(&mut content).unwrap();
         file.write_all(&content).unwrap();
-    }
+    });
 }
 
 pub fn list_subscriptions(state: &State) {
     for podcast in state.subscriptions() {
         println!("{}", podcast.name);
+    }
+}
+
+pub fn download_range(state: &State, p_search: &str, e_search: &str) {
+    let re_pod = Regex::new(p_search).unwrap();
+    let input = String::from(e_search);
+    let range: Vec<usize> = input
+        .split('-')
+        .map(|i| i.parse::<usize>().unwrap())
+        .collect();
+
+    for subscription in state.subscriptions() {
+        if re_pod.is_match(&subscription.name) {
+            let podcast = Podcast::from_url(&subscription.url).unwrap();
+            let episodes = podcast.episodes();
+
+            &episodes[episodes.len() - range[1]..episodes.len() - range[0]]
+                .par_iter()
+                .for_each(|ref ep| if let Err(err) = ep.download(podcast.title()) {
+                    println!("{}", err);
+                });
+        }
     }
 }
 
@@ -80,7 +102,14 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
     let ep_num = ep_num_string.parse::<usize>().unwrap();
     let mut path = get_podcast_dir();
     path.push(".rss");
-    DirBuilder::new().recursive(true).create(&path).unwrap();
+    if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
+        eprintln!(
+            "Couldn't create directory: {}\nReason: {}",
+            path.to_str().unwrap(),
+            err
+        );
+        return;
+    }
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.name) {
             let mut filename = String::from(subscription.name);
@@ -110,19 +139,22 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
     }
 }
 
-fn launch_player(url: &str)  {
+fn launch_player(url: &str) {
     if let Err(_) = launch_mpv(&url) {
         launch_vlc(url)
     }
 }
 
 fn launch_mpv(url: &str) -> Result<(), io::Error> {
-    if let Err(err) = Command::new("mpv").args(&["--audio-display=no", "--ytdl=no", url]).status() {
+    if let Err(err) = Command::new("mpv")
+        .args(&["--audio-display=no", "--ytdl=no", url])
+        .status()
+    {
         match err.kind() {
             io::ErrorKind::NotFound => {
                 eprintln!("Couldn't open mpv\nTrying vlc...");
                 return Err(err);
-            },
+            }
             _ => eprintln!("Error: {}", err),
         }
     }
@@ -134,7 +166,7 @@ fn launch_vlc(url: &str) {
         match err.kind() {
             io::ErrorKind::NotFound => {
                 eprintln!("vlc not found in PATH\nAborting...");
-            },
+            }
             _ => eprintln!("Error: {}", err),
         }
     }

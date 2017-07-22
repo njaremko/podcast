@@ -1,4 +1,5 @@
 extern crate clap;
+extern crate rayon;
 extern crate regex;
 extern crate reqwest;
 extern crate rss;
@@ -61,11 +62,9 @@ fn main() {
         .subcommand(
             SubCommand::with_name("search")
                 .about("searches for podcasts")
-                .arg(
-                    Arg::with_name("debug")
-                        .short("d")
-                        .help("print debug information verbosely"),
-                ),
+                .arg(Arg::with_name("debug").short("d").help(
+                    "print debug information verbosely",
+                )),
         )
         .subcommand(
             SubCommand::with_name("subscribe")
@@ -77,9 +76,9 @@ fn main() {
                         .index(1),
                 ),
         )
-        .subcommand(
-            SubCommand::with_name("update").about("update subscribed podcasts"),
-        )
+        .subcommand(SubCommand::with_name("update").about(
+            "update subscribed podcasts",
+        ))
         .get_matches();
 
     match matches.subcommand_name() {
@@ -87,7 +86,13 @@ fn main() {
             let download_matches = matches.subcommand_matches("download").unwrap();
             let podcast = download_matches.value_of("PODCAST").unwrap();
             match download_matches.value_of("EPISODE") {
-                Some(ep) => download_episode(&state, podcast, ep),
+                Some(ep) => {
+                    if String::from(ep).contains("-") {
+                        download_range(&state, podcast, ep)
+                    } else {
+                        download_episode(&state, podcast, ep)
+                    }
+                }
                 None => download_all(&state, podcast),
             }
         }

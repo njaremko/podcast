@@ -28,7 +28,7 @@ pub fn already_downloaded(dir: &str) -> BTreeSet<String> {
 }
 
 pub fn get_podcast_dir() -> PathBuf {
-   match env::var_os("PODCAST") {
+    match env::var_os("PODCAST") {
         Some(val) => PathBuf::from(val),
         None => {
             let mut path = env::home_dir().unwrap();
