@@ -11,5 +11,9 @@
 
 
 Downloads can be done either:
+
 Individually: `podcast download $podcast_name 4`
+
+or
+
 Multiple: `podcast download $podcast_name 1,5,9-12,14`
