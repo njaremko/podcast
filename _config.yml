@@ -1,1 +1,5 @@
 theme: jekyll-theme-minimal
+title: [podcast]
+description: [podcast is a command line podcast player]
+show_downloads: ["true"]
+google_analytics: [UA-69345024-2]
