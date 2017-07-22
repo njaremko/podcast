@@ -51,22 +51,12 @@ pub fn list_subscriptions(state: &State) {
 
 pub fn download_range(state: &State, p_search: &str, e_search: &str) {
     let re_pod = Regex::new(p_search).unwrap();
-    let input = String::from(e_search);
-    let range: Vec<usize> = input
-        .split('-')
-        .map(|i| i.parse::<usize>().unwrap())
-        .collect();
 
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.name) {
             let podcast = Podcast::from_url(&subscription.url).unwrap();
-            let episodes = podcast.episodes();
-
-            &episodes[episodes.len() - range[1]..episodes.len() - range[0]]
-                .par_iter()
-                .for_each(|ref ep| if let Err(err) = ep.download(podcast.title()) {
-                    println!("{}", err);
-                });
+            let episodes_to_download = parse_download_episodes(e_search);
+            podcast.download_specific(episodes_to_download);
         }
     }
 }

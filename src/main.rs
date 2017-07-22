@@ -87,7 +87,7 @@ fn main() {
             let podcast = download_matches.value_of("PODCAST").unwrap();
             match download_matches.value_of("EPISODE") {
                 Some(ep) => {
-                    if String::from(ep).contains("-") {
+                    if String::from(ep).contains(|c| c == '-' || c == ',') {
                         download_range(&state, podcast, ep)
                     } else {
                         download_episode(&state, podcast, ep)

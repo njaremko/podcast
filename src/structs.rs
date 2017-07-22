@@ -126,6 +126,26 @@ impl Podcast {
             },
         );
     }
+
+    pub fn download_specific(&self, episode_numbers: Vec<usize>) {
+        let mut path = get_podcast_dir();
+        path.push(self.title());
+
+        let downloaded = already_downloaded(self.title());
+        let episodes = self.episodes();
+
+        episode_numbers.par_iter().for_each(
+            |ep_num| if let Some(ep_title) =
+                episodes[episodes.len() - ep_num].title()
+            {
+                if !downloaded.contains(ep_title) {
+                    if let Err(err) = episodes[episodes.len() - ep_num].download(self.title()) {
+                        println!("{}", err);
+                    }
+                }
+            },
+        );
+    }
 }
 
 impl Episode {
