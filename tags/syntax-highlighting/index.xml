@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Syntax Highlighting on podcast</title>
+    <link>https://nathanjaremko.com/podcast/tags/syntax-highlighting/</link>
+    <description>Recent content in Syntax Highlighting on podcast</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    
+	<atom:link href="https://nathanjaremko.com/podcast/tags/syntax-highlighting/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Project 4</title>
+      <link>https://nathanjaremko.com/podcast/project/project4/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://nathanjaremko.com/podcast/project/project4/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
