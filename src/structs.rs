@@ -5,14 +5,24 @@ use reqwest;
 use rss::{self, Channel, Item};
 use serde_json;
 use std::collections::BTreeSet;
-use std::fs::{DirBuilder, File};
+use std::fs::{self, DirBuilder, File};
 use std::io::{self, Read, Write};
 use utils::*;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subscription {
-    pub name: String,
-    pub url: String,
+    title: String,
+    url: String,
+}
+
+impl Subscription {
+    pub fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    pub fn url(&self) -> String {
+        self.url.clone()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -50,20 +60,19 @@ impl State {
     pub fn subscribe(&mut self, url: &str) {
         let mut set = BTreeSet::new();
         for sub in self.subscriptions() {
-            set.insert(sub.url);
+            set.insert(sub.title());
         }
-        if !set.contains(url) {
-            let channel = Channel::from_url(url).unwrap();
+        let channel = Channel::from_url(url).unwrap();
+        if !set.contains(channel.title()) {
             self.subs.push(Subscription {
-                name: String::from(channel.title()),
+                title: String::from(channel.title()),
                 url: String::from(url),
             });
         }
         if let Err(err) = self.save() {
             eprintln!("{}", err);
         }
-        // TODO only download new rss, don't refresh all
-        update_rss(&self.clone());
+        download_rss(url);
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
@@ -71,14 +80,13 @@ impl State {
     }
 
     pub fn save(&self) -> Result<(), io::Error> {
-        // TODO write to a temp file and rename instead of overwriting
-
         let mut path = get_podcast_dir();
         DirBuilder::new().recursive(true).create(&path).unwrap();
-        path.push(".subscriptions");
+        path.push(".subscriptions.tmp");
         let serialized = serde_json::to_string(self)?;
         let mut file = File::create(&path)?;
         file.write_all(serialized.as_bytes())?;
+        fs::rename(&path, get_sub_file())?;
         Ok(())
     }
 }

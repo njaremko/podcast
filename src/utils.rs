@@ -46,6 +46,22 @@ pub fn get_podcast_dir() -> PathBuf {
     }
 }
 
+pub fn get_sub_file() -> PathBuf {
+    match env::var_os("PODCAST") {
+        Some(val) => {
+            let mut path = PathBuf::from(val);
+            path.push(".subscriptions");
+            path
+        }
+        None => {
+            let mut path = env::home_dir().unwrap();
+            path.push("Podcasts");
+            path.push(".subscriptions");
+            path
+        }
+    }
+}
+
 pub fn parse_download_episodes(e_search: &str) -> Vec<usize> {
     let input = String::from(e_search);
     let mut ranges = Vec::<(usize, usize)>::new();

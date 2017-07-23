@@ -124,6 +124,6 @@ fn main() {
         _ => (),
     }
     if let Err(err) = state.save() {
-            eprintln!("{}", err);
-        }
+        eprintln!("{}", err);
+    }
 }
