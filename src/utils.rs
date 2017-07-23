@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::num::ParseIntError;
 
 
 pub fn already_downloaded(dir: &str) -> BTreeSet<String> {
@@ -15,12 +16,9 @@ pub fn already_downloaded(dir: &str) -> BTreeSet<String> {
             if let Ok(entry) = entry {
                 match entry.file_name().into_string() {
                     Ok(val) => {
-                        // TODO There has to be a better way to do this...later
-                        result.insert(String::from(
-                            val.trim_right_matches(".mp3")
-                                .trim_right_matches(".m4a")
-                                .trim_right_matches(".ogg"),
-                        ));
+                        let name = String::from(val);
+                        let index = name.find('.').unwrap();
+                        result.insert(String::from(&name[0..index]));
                     }
                     Err(_) => {
                         println!(
@@ -62,7 +60,7 @@ pub fn get_sub_file() -> PathBuf {
     }
 }
 
-pub fn parse_download_episodes(e_search: &str) -> Vec<usize> {
+pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntError> {
     let input = String::from(e_search);
     let mut ranges = Vec::<(usize, usize)>::new();
     let mut elements = Vec::<usize>::new();
@@ -75,7 +73,7 @@ pub fn parse_download_episodes(e_search: &str) -> Vec<usize> {
                 .collect();
             ranges.push((range[0], range[1]));
         } else {
-            elements.push(elem.parse::<usize>().unwrap());
+            elements.push(elem.parse::<usize>()?);
         }
     }
 
@@ -86,5 +84,5 @@ pub fn parse_download_episodes(e_search: &str) -> Vec<usize> {
         }
     }
     elements.dedup();
-    elements
+    Ok(elements)
 }

@@ -72,8 +72,11 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) {
     for subscription in state.subscriptions() {
         if re_pod.is_match(&subscription.title()) {
             let podcast = Podcast::from_url(&subscription.url()).unwrap();
-            let episodes_to_download = parse_download_episodes(e_search);
-            podcast.download_specific(episodes_to_download);
+            match parse_download_episodes(e_search) {
+                Ok(episodes_to_download) => podcast.download_specific(episodes_to_download),
+                Err(err) => eprintln!("{}", err),
+            }
+            return;
         }
     }
 }
@@ -87,7 +90,7 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
             let podcast = Podcast::from_url(&subscription.url()).unwrap();
             let episodes = podcast.episodes();
             if let Err(err) = episodes[episodes.len() - ep_num].download(podcast.title()) {
-                println!("{}", err);
+                eprintln!("{}", err);
             }
         }
     }
