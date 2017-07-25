@@ -11,10 +11,10 @@ use utils::*;
 
 pub fn list_episodes(state: &State, search: &str) {
     let re = Regex::new(search).unwrap();
-    for podcast in state.subscriptions() {
-        if re.is_match(&podcast.title()) {
-            println!("Episodes for {}:", &podcast.title());
-            match Podcast::from_url(&podcast.url()) {
+    for podcast in &state.subs {
+        if re.is_match(&podcast.title) {
+            println!("Episodes for {}:", &podcast.title);
+            match Podcast::from_url(&podcast.url) {
                 Ok(podcast) => {
                     let episodes = podcast.episodes();
                     for (index, episode) in episodes.iter().enumerate() {
@@ -56,9 +56,9 @@ pub fn download_rss(url: &str, config: &Config) {
 
 pub fn update_rss(state: &mut State) {
     println!("Checking for new episodes...");
-    state.subs.par_iter_mut().for_each(|mut sub| {
+    &state.subs.par_iter_mut().for_each(|mut sub| {
         let mut path = get_podcast_dir();
-        path.push(sub.title());
+        path.push(&sub.title);
         DirBuilder::new().recursive(true).create(&path).unwrap();
 
         let mut titles = HashSet::new();
@@ -67,7 +67,7 @@ pub fn update_rss(state: &mut State) {
             titles.insert(trim_extension(&entry.file_name().into_string().unwrap()));
         }
 
-        let mut resp = reqwest::get(&sub.url()).unwrap();
+        let mut resp = reqwest::get(&sub.url).unwrap();
         let mut content: Vec<u8> = Vec::new();
         resp.read_to_end(&mut content).unwrap();
         let podcast = Podcast::from(Channel::read_from(BufReader::new(&content[..])).unwrap());
@@ -92,17 +92,17 @@ pub fn update_rss(state: &mut State) {
 }
 
 pub fn list_subscriptions(state: &State) {
-    for podcast in state.subscriptions() {
-        println!("{}", podcast.title());
+    for podcast in &state.subscriptions() {
+        println!("{}", &podcast.title);
     }
 }
 
 pub fn download_range(state: &State, p_search: &str, e_search: &str) {
     let re_pod = Regex::new(p_search).unwrap();
 
-    for subscription in state.subscriptions() {
-        if re_pod.is_match(&subscription.title()) {
-            let podcast = Podcast::from_url(&subscription.url()).unwrap();
+    for subscription in &state.subs {
+        if re_pod.is_match(&subscription.title) {
+            let podcast = Podcast::from_url(&subscription.url).unwrap();
             match parse_download_episodes(e_search) {
                 Ok(episodes_to_download) => podcast.download_specific(episodes_to_download),
                 Err(err) => eprintln!("{}", err),
@@ -116,9 +116,9 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
     let re_pod = Regex::new(p_search).unwrap();
     let ep_num = e_search.parse::<usize>().unwrap();
 
-    for subscription in state.subscriptions() {
-        if re_pod.is_match(&subscription.title()) {
-            let podcast = Podcast::from_url(&subscription.url()).unwrap();
+    for subscription in &state.subs {
+        if re_pod.is_match(&subscription.title) {
+            let podcast = Podcast::from_url(&subscription.url).unwrap();
             let episodes = podcast.episodes();
             if let Err(err) = episodes[episodes.len() - ep_num].download(podcast.title()) {
                 eprintln!("{}", err);
@@ -130,9 +130,9 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
 pub fn download_all(state: &State, p_search: &str) {
     let re_pod = Regex::new(p_search).unwrap();
 
-    for subscription in state.subscriptions() {
-        if re_pod.is_match(&subscription.title()) {
-            let podcast = Podcast::from_url(&subscription.url()).unwrap();
+    for subscription in &state.subs {
+        if re_pod.is_match(&subscription.title) {
+            let podcast = Podcast::from_url(&subscription.url).unwrap();
             podcast.download();
         }
     }
@@ -151,9 +151,9 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
         );
         return;
     }
-    for subscription in state.subscriptions() {
-        if re_pod.is_match(&subscription.title()) {
-            let mut filename = String::from(subscription.title());
+    for subscription in &state.subs {
+        if re_pod.is_match(&subscription.title) {
+            let mut filename = subscription.title.clone();
             filename.push_str(".xml");
             path.push(filename);
 
