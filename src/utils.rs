@@ -1,12 +1,33 @@
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
 use std::num::ParseIntError;
+use std::path::PathBuf;
 
 
-pub fn already_downloaded(dir: &str) -> BTreeSet<String> {
-    let mut result = BTreeSet::new();
+pub fn trim_extension(filename: &str) -> String {
+    let name = String::from(filename);
+    let index = name.rfind('.').unwrap();
+    String::from(&name[0..index])
+}
+
+pub fn find_extension(input: &str) -> Option<&str> {
+    let tmp = String::from(input);
+    if tmp.contains(".mp3") {
+        Some(".mp3")
+    } else if tmp.contains(".m4a") {
+        Some(".m4a")
+    } else if tmp.contains(".wav") {
+        Some(".wav")
+    } else if tmp.contains(".ogg") {
+        Some(".ogg")
+    } else {
+        None
+    }
+}
+
+pub fn already_downloaded(dir: &str) -> HashSet<String> {
+    let mut result = HashSet::new();
 
     let mut path = get_podcast_dir();
     path.push(dir);

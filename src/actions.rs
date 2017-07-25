@@ -1,10 +1,11 @@
 use regex::Regex;
 use reqwest;
+use rayon::prelude::*;
 use rss::Channel;
-use std::fs::{DirBuilder, File};
+use std::collections::HashSet;
+use std::fs::{self, DirBuilder, File};
 use std::io::{self, BufReader, Read, Write};
 use std::process::Command;
-use rayon::prelude::*;
 use structs::*;
 use utils::*;
 
@@ -26,7 +27,7 @@ pub fn list_episodes(state: &State, search: &str) {
     }
 }
 
-pub fn download_rss(url: &str) {
+pub fn download_rss(url: &str, config: &Config) {
     println!("Downloading RSS feed...");
     let mut path = get_podcast_dir();
     path.push(".rss");
@@ -40,23 +41,53 @@ pub fn download_rss(url: &str) {
     path.push(filename);
     let mut file = File::create(&path).unwrap();
     file.write_all(&content).unwrap();
+
+    let download_limit = config.auto_download_limit as usize;
+    if download_limit > 0 {
+        let podcast = Podcast::from(channel);
+        let episodes = podcast.episodes();
+        &episodes[..download_limit].par_iter().for_each(|ref ep| {
+            if let Err(err) = ep.download(podcast.title()) {
+                eprintln!("Error downloading {}: {}", podcast.title(), err);
+            }
+        });
+    }
 }
 
-pub fn update_rss(state: &State) {
-    println!("Updating RSS feeds...");
-    state.subscriptions().par_iter().for_each(|ref sub| {
+pub fn update_rss(state: &mut State) {
+    println!("Checking for new episodes...");
+    state.subs.par_iter_mut().for_each(|mut sub| {
         let mut path = get_podcast_dir();
-        path.push(".rss");
+        path.push(sub.title());
         DirBuilder::new().recursive(true).create(&path).unwrap();
+
+        let mut titles = HashSet::new();
+        for entry in fs::read_dir(&path).unwrap() {
+            let entry = entry.unwrap();
+            titles.insert(trim_extension(&entry.file_name().into_string().unwrap()));
+        }
+
         let mut resp = reqwest::get(&sub.url()).unwrap();
         let mut content: Vec<u8> = Vec::new();
         resp.read_to_end(&mut content).unwrap();
-        let channel = Channel::read_from(BufReader::new(&content[..])).unwrap();
-        let mut filename = String::from(channel.title());
+        let podcast = Podcast::from(Channel::read_from(BufReader::new(&content[..])).unwrap());
+        path = get_podcast_dir();
+        path.push(".rss");
+
+        let mut filename = String::from(podcast.title());
         filename.push_str(".xml");
-        path.push(filename);
+        path.push(&filename);
         let mut file = File::create(&path).unwrap();
         file.write_all(&content).unwrap();
+
+        if podcast.episodes().len() > sub.num_episodes {
+            &podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
+                .par_iter()
+                .for_each(|ref ep| if let Err(err) = ep.download(podcast.title()) {
+                    eprintln!("Error downloading {}: {}", podcast.title(), err);
+                });
+        }
+        sub.num_episodes = podcast.episodes().len();
     });
 }
 

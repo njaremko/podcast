@@ -8,6 +8,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate yaml_rust;
 
 mod actions;
 mod structs;
@@ -19,7 +20,7 @@ use structs::*;
 
 fn main() {
     let mut state = State::new();
-
+    let config = Config::new();
     let matches = App::new("podcast")
         .version("1.0")
         .author("Nathan J. <njaremko@gmail.com>")
@@ -117,10 +118,11 @@ fn main() {
                     .unwrap()
                     .value_of("URL")
                     .unwrap(),
+                &config,
             )
         }
         Some("search") => (),
-        Some("update") => update_rss(&state),
+        Some("update") => update_rss(&mut state),
         _ => (),
     }
     if let Err(err) = state.save() {

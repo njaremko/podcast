@@ -8,11 +8,46 @@ use std::collections::BTreeSet;
 use std::fs::{self, DirBuilder, File};
 use std::io::{self, Read, Write};
 use utils::*;
+use yaml_rust::YamlLoader;
+
+pub struct Config {
+    pub auto_download_limit: i64,
+    pub auto_delete_limit: i64,
+}
+
+impl Config {
+    pub fn new() -> Config {
+        let mut path = get_podcast_dir();
+        let mut download_limit = 1;
+        let mut delete_limit = 0;
+        path.push(".config");
+        if path.exists() {
+            let mut s = String::new();
+            File::open(&path).unwrap().read_to_string(&mut s).unwrap();
+            let config = YamlLoader::load_from_str(&s).unwrap();
+            if config.len() > 0 {
+                let doc = &config[0];
+                if let Some(val) = doc["auto_download_limit"].as_i64() {
+                    download_limit = val;
+                }
+                if let Some(val) = doc["auto_delete_limit"].as_i64() {
+                    delete_limit = val;
+                }
+            }
+        }
+        Config {
+            auto_download_limit: download_limit,
+            auto_delete_limit: delete_limit,
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subscription {
-    title: String,
-    url: String,
+    pub title: String,
+    pub url: String,
+    pub num_episodes: usize,
 }
 
 impl Subscription {
@@ -27,8 +62,8 @@ impl Subscription {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
-    last_run_time: DateTime<Utc>,
-    subs: Vec<Subscription>,
+    pub last_run_time: DateTime<Utc>,
+    pub subs: Vec<Subscription>,
 }
 
 impl State {
@@ -45,7 +80,7 @@ impl State {
                 .signed_duration_since(Utc::now())
                 .num_seconds() < -86400
             {
-                update_rss(&state.clone());
+                update_rss(&mut state);
             }
             state.last_run_time = Utc::now();
             state
@@ -57,22 +92,23 @@ impl State {
         }
     }
 
-    pub fn subscribe(&mut self, url: &str) {
+    pub fn subscribe(&mut self, url: &str, config: &Config) {
         let mut set = BTreeSet::new();
         for sub in self.subscriptions() {
             set.insert(sub.title());
         }
-        let channel = Channel::from_url(url).unwrap();
-        if !set.contains(channel.title()) {
+        let podcast = Podcast::from(Channel::from_url(url).unwrap());
+        if !set.contains(podcast.title()) {
             self.subs.push(Subscription {
-                title: String::from(channel.title()),
+                title: String::from(podcast.title()),
                 url: String::from(url),
+                num_episodes: podcast.episodes().len(),
             });
         }
         if let Err(err) = self.save() {
             eprintln!("{}", err);
         }
-        download_rss(url);
+        download_rss(url, config);
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
@@ -195,12 +231,13 @@ impl Episode {
                     "audio/mpeg" => Some(".mp3"),
                     "audio/mp4" => Some(".m4a"),
                     "audio/ogg" => Some(".ogg"),
-                    _ => None,
+                    _ => find_extension(self.url().unwrap()),
                 }
             }
             None => None,
         }
     }
+
 
     pub fn download(&self, podcast_name: &str) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
@@ -209,10 +246,10 @@ impl Episode {
 
         if let Some(url) = self.url() {
             if let Some(title) = self.title() {
-                println!("Downloading: {}", title);
                 let mut filename = String::from(title);
                 filename.push_str(self.extension().unwrap());
                 path.push(filename);
+                println!("Downloading: {}", path.to_str().unwrap());
                 let mut file = File::create(&path)?;
                 let mut resp = reqwest::get(url).unwrap();
                 let mut content: Vec<u8> = Vec::new();
