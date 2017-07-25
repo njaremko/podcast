@@ -19,7 +19,9 @@ use clap::{Arg, App, SubCommand};
 use structs::*;
 
 fn main() {
-    let mut state = State::new();
+    let mut state = State::new().expect(
+        ".subscription file couldn't be parsed...I probably changed the format...sorry",
+    );
     let config = Config::new();
     let matches = App::new("podcast")
         .version("1.0")

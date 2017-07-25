@@ -34,6 +34,9 @@ impl Config {
                     delete_limit = val;
                 }
             }
+        } else {
+            let mut file = File::create(&path).unwrap();
+            file.write_all(b"auto_download_limit: 1").unwrap();
         }
         Config {
             auto_download_limit: download_limit,
@@ -67,13 +70,14 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> State {
+    pub fn new() -> Result<State, serde_json::Error> {
         let mut path = get_podcast_dir();
+        DirBuilder::new().recursive(true).create(&path).unwrap();
         path.push(".subscriptions");
         if path.exists() {
             let mut s = String::new();
             File::open(&path).unwrap().read_to_string(&mut s).unwrap();
-            let mut state: State = serde_json::from_str(&s).unwrap();
+            let mut state: State = serde_json::from_str(&s)?;
             // Check if a day has passed (86400 seconds)
             if state
                 .last_run_time
@@ -83,12 +87,12 @@ impl State {
                 update_rss(&mut state);
             }
             state.last_run_time = Utc::now();
-            state
+            Ok(state)
         } else {
-            State {
+            Ok(State {
                 last_run_time: Utc::now(),
                 subs: Vec::new(),
-            }
+            })
         }
     }
 
