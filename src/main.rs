@@ -103,7 +103,7 @@ fn main() {
         Some("list") => {
             let list_matches = matches.subcommand_matches("list").unwrap();
             match list_matches.value_of("PODCAST") {
-                Some(regex) => list_episodes(&state, regex),
+                Some(regex) => list_episodes(regex),
                 None => list_subscriptions(&state),
             }
         }

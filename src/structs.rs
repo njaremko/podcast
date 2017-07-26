@@ -61,14 +61,10 @@ pub struct State {
 
 impl State {
     pub fn new() -> Result<State, String> {
-        let mut path = get_podcast_dir();
-        if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
-            return Err(format!(
-                "Couldn't create directory: {}\nReason: {}",
-                path.to_str().unwrap(),
-                err
-                ))
+        if let Err(err) = create_directories() {
+            return Err(format!("{}", err))
         }
+        let mut path = get_podcast_dir();
         path.push(".subscriptions");
         if path.exists() {
             let mut s = String::new();
@@ -76,7 +72,7 @@ impl State {
             match serde_json::from_str(&s) {
                 Ok(val) => {
                     let mut state: State = val;
-            // Check if a day has passed (86400 seconds)
+                    // Check if a day has passed (86400 seconds)
                     if state
                         .last_run_time
                             .signed_duration_since(Utc::now())
@@ -86,8 +82,10 @@ impl State {
                             }
                     state.last_run_time = Utc::now();
                     Ok(state)
-                },
-                Err(_) => Err(format!("Failed to parse .subscriptions ... I probably changed the schema ... sorry"))
+                }
+                Err(_) => Err(format!(
+                        "Failed to parse .subscriptions ... I probably changed the schema ... sorry"
+                        )),
             }
         } else {
             Ok(State {
@@ -122,7 +120,6 @@ impl State {
 
     pub fn save(&self) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
-        DirBuilder::new().recursive(true).create(&path).unwrap();
         path.push(".subscriptions.tmp");
         let serialized = serde_json::to_string(self)?;
         let mut file = File::create(&path)?;

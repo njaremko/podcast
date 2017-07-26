@@ -9,20 +9,22 @@ use std::process::Command;
 use structs::*;
 use utils::*;
 
-pub fn list_episodes(state: &State, search: &str) {
+pub fn list_episodes(search: &str) {
     let re = Regex::new(search).unwrap();
-    for podcast in &state.subs {
-        if re.is_match(&podcast.title) {
-            println!("Episodes for {}:", &podcast.title);
-            match Podcast::from_url(&podcast.url) {
-                Ok(podcast) => {
-                    let episodes = podcast.episodes();
-                    for (index, episode) in episodes.iter().enumerate() {
-                        println!("({}) {}", episodes.len() - index, episode.title().unwrap());
-                    }
-                }
-                Err(err) => println!("{}", err),
+    let mut path = get_podcast_dir();
+    path.push(".rss");
+    DirBuilder::new().recursive(true).create(&path).unwrap();
+    for entry in fs::read_dir(&path).unwrap() {
+        let entry = entry.unwrap();
+        if re.is_match(&entry.file_name().into_string().unwrap()) {
+            let file = File::open(&entry.path()).unwrap();
+            let channel = Channel::read_from(BufReader::new(file)).unwrap();
+            let podcast = Podcast::from(channel);
+            let episodes = podcast.episodes();
+            for (num, ep) in episodes.iter().enumerate() {
+                println!("({}) {}", episodes.len()-num, ep.title().unwrap());
             }
+            return;
         }
     }
 }
