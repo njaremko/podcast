@@ -61,32 +61,37 @@ pub struct State {
 
 impl State {
     pub fn new() -> Result<State, String> {
-        if let Err(err) = create_directories() {
-            return Err(format!("{}", err))
-        }
         let mut path = get_podcast_dir();
         path.push(".subscriptions");
         if path.exists() {
             let mut s = String::new();
-            File::open(&path).unwrap().read_to_string(&mut s).unwrap();
-            match serde_json::from_str(&s) {
-                Ok(val) => {
-                    let mut state: State = val;
-                    // Check if a day has passed (86400 seconds)
-                    if state
-                        .last_run_time
-                            .signed_duration_since(Utc::now())
-                            .num_seconds() < -86400
-                            {
-                                update_rss(&mut state);
-                            }
-                    state.last_run_time = Utc::now();
-                    Ok(state)
+            let mut file = match File::open(&path) {
+                Ok(val) => val,
+                Err(err) => return Err(format!("{}", err)),
+            };
+            if let Err(err) = file.read_to_string(&mut s) {
+                return Err(format!("{}", err));
+            };
+            let mut state: State = match serde_json::from_str(&s) {
+                Ok(val) => val,
+                Err(err) => {
+                    return Err(format!(
+                        "Could not parse: {}\nReason: {}",
+                        &path.to_str().unwrap(),
+                        err
+                    ))
                 }
-                Err(_) => Err(format!(
-                        "Failed to parse .subscriptions ... I probably changed the schema ... sorry"
-                        )),
+            };
+            // Check if a day has passed (86400 seconds)
+            if state
+                .last_run_time
+                .signed_duration_since(Utc::now())
+                .num_seconds() < -86400
+            {
+                update_rss(&mut state);
             }
+            state.last_run_time = Utc::now();
+            Ok(state)
         } else {
             Ok(State {
                 last_run_time: Utc::now(),
@@ -182,7 +187,7 @@ impl Podcast {
 
         self.episodes().par_iter().for_each(
             |ref i| if let Some(ep_title) =
-            i.title()
+                i.title()
             {
                 if !downloaded.contains(ep_title) {
                     if let Err(err) = i.download(self.title()) {
@@ -190,7 +195,7 @@ impl Podcast {
                     }
                 }
             },
-            );
+        );
     }
 
     pub fn download_specific(&self, episode_numbers: Vec<usize>) {
@@ -202,7 +207,7 @@ impl Podcast {
 
         episode_numbers.par_iter().for_each(
             |ep_num| if let Some(ep_title) =
-            episodes[episodes.len() - ep_num].title()
+                episodes[episodes.len() - ep_num].title()
             {
                 if !downloaded.contains(ep_title) {
                     if let Err(err) = episodes[episodes.len() - ep_num].download(self.title()) {
@@ -210,7 +215,7 @@ impl Podcast {
                     }
                 }
             },
-            );
+        );
     }
 }
 

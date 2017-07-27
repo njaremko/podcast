@@ -1,11 +1,9 @@
 use std::collections::HashSet;
 use std::env;
+use std::fs::DirBuilder;
 use std::fs;
 use std::num::ParseIntError;
 use std::path::PathBuf;
-use std::fs::DirBuilder;
-use std::io;
-
 
 pub fn trim_extension(filename: &str) -> String {
     let name = String::from(filename);
@@ -28,16 +26,15 @@ pub fn find_extension(input: &str) -> Option<&str> {
     }
 }
 
-pub fn create_directories() -> io::Result<()> {
+pub fn create_directories() -> Result<(), String> {
     let mut path = get_podcast_dir();
     path.push(".rss");
     if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
-        eprintln!(
-                    "Couldn't create directory: {}\nReason: {}",
-                    path.to_str().unwrap(),
-                    err
-                    );
-        return Err(err)
+        return Err(format!(
+            "Couldn't create directory: {}\nReason: {}",
+            path.to_str().unwrap(),
+            err
+        ));
     }
     Ok(())
 }
@@ -61,7 +58,7 @@ pub fn already_downloaded(dir: &str) -> HashSet<String> {
                         println!(
                             "OsString: {:?} couldn't be converted to String",
                             entry.file_name()
-                            );
+                        );
                     }
                 }
             }

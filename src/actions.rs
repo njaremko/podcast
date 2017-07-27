@@ -1,6 +1,6 @@
+use rayon::prelude::*;
 use regex::Regex;
 use reqwest;
-use rayon::prelude::*;
 use rss::Channel;
 use std::collections::HashSet;
 use std::fs::{self, DirBuilder, File};
@@ -22,7 +22,7 @@ pub fn list_episodes(search: &str) {
             let podcast = Podcast::from(channel);
             let episodes = podcast.episodes();
             for (num, ep) in episodes.iter().enumerate() {
-                println!("({}) {}", episodes.len()-num, ep.title().unwrap());
+                println!("({}) {}", episodes.len() - num, ep.title().unwrap());
             }
             return;
         }

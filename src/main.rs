@@ -17,11 +17,20 @@ mod utils;
 use actions::*;
 use clap::{Arg, App, SubCommand};
 use structs::*;
+use utils::*;
 
 fn main() {
-    let mut state = State::new().expect(
-        ".subscription file couldn't be parsed...I probably changed the format...sorry",
-    );
+    if let Err(err) = create_directories() {
+        eprintln!("{}", err);
+        return;
+    }
+    let mut state = match State::new() {
+        Ok(val) => val,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
     let config = Config::new();
     let matches = App::new("podcast")
         .version("1.0")
