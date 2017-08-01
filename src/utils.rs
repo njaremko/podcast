@@ -1,14 +1,16 @@
 use std::collections::HashSet;
 use std::env;
-use std::fs::DirBuilder;
-use std::fs;
 use std::num::ParseIntError;
 use std::path::PathBuf;
+use std::fs::{self, DirBuilder};
+use std::io;
 
-pub fn trim_extension(filename: &str) -> String {
+pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
-    let index = name.rfind('.').unwrap();
-    String::from(&name[0..index])
+    match name.rfind('.') {
+        Some(index) => Some(String::from(&name[0..index])),
+        None => None,
+    }
 }
 
 pub fn find_extension(input: &str) -> Option<&str> {
@@ -39,39 +41,37 @@ pub fn create_directories() -> Result<(), String> {
     Ok(())
 }
 
-pub fn already_downloaded(dir: &str) -> HashSet<String> {
+pub fn already_downloaded(dir: &str) -> Result<HashSet<String>, io::Error> {
     let mut result = HashSet::new();
 
     let mut path = get_podcast_dir();
     path.push(dir);
 
-    if let Ok(entries) = fs::read_dir(path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                match entry.file_name().into_string() {
-                    Ok(val) => {
-                        let name = String::from(val);
-                        let index = name.find('.').unwrap();
-                        result.insert(String::from(&name[0..index]));
-                    }
-                    Err(_) => {
-                        println!(
-                            "OsString: {:?} couldn't be converted to String",
-                            entry.file_name()
-                        );
-                    }
-                }
+    let entries = fs::read_dir(path)?;
+    for entry in entries {
+        let entry = entry?;
+        match entry.file_name().into_string() {
+            Ok(val) => {
+                let name = String::from(val);
+                let index = name.find('.').unwrap();
+                result.insert(String::from(&name[0..index]));
+            }
+            Err(_) => {
+                println!(
+                    "OsString: {:?} couldn't be converted to String",
+                    entry.file_name()
+                );
             }
         }
     }
-    result
+    Ok(result)
 }
 
 pub fn get_podcast_dir() -> PathBuf {
     match env::var_os("PODCAST") {
         Some(val) => PathBuf::from(val),
         None => {
-            let mut path = env::home_dir().unwrap();
+            let mut path = env::home_dir().expect("Couldn't find your home directory");
             path.push("Podcasts");
             path
         }
@@ -79,19 +79,15 @@ pub fn get_podcast_dir() -> PathBuf {
 }
 
 pub fn get_sub_file() -> PathBuf {
-    match env::var_os("PODCAST") {
-        Some(val) => {
-            let mut path = PathBuf::from(val);
-            path.push(".subscriptions");
-            path
-        }
-        None => {
-            let mut path = env::home_dir().unwrap();
-            path.push("Podcasts");
-            path.push(".subscriptions");
-            path
-        }
-    }
+    let mut path = get_podcast_dir();
+    path.push(".subscriptions");
+    path
+}
+
+pub fn get_xml_dir() -> PathBuf {
+    let mut path = get_podcast_dir();
+    path.push(".rss");
+    path
 }
 
 pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntError> {

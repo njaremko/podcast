@@ -6,7 +6,7 @@ use rss::{self, Channel, Item};
 use serde_json;
 use std::collections::BTreeSet;
 use std::fs::{self, DirBuilder, File};
-use std::io::{self, Read, Write};
+use std::io::{self, BufReader, Read, Write};
 use utils::*;
 use yaml_rust::YamlLoader;
 
@@ -162,10 +162,28 @@ impl Podcast {
         self.0.link()
     }
 
+    #[allow(dead_code)]
     pub fn from_url(url: &str) -> Result<Podcast, rss::Error> {
         match Channel::from_url(url) {
             Ok(val) => Ok(Podcast::from(val)),
             Err(err) => Err(err),
+        }
+    }
+
+    pub fn from_title(title: &str) -> Result<Podcast, String> {
+        let mut path = get_xml_dir();
+        let mut filename = String::from(title);
+        filename.push_str(".xml");
+        path.push(filename);
+
+        match File::open(&path) {
+            Ok(file) => {
+                match Channel::read_from(BufReader::new(file)) {
+                    Ok(podcast) => return Ok(Podcast::from(podcast)),
+                    Err(err) => return Err(format!("Error: {}", err)),
+                }
+            }
+            Err(err) => return Err(format!("Error: {}", err)),
         }
     }
 
@@ -179,11 +197,11 @@ impl Podcast {
         result
     }
 
-    pub fn download(&self) {
+    pub fn download(&self) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
         path.push(self.title());
 
-        let downloaded = already_downloaded(self.title());
+        let downloaded = already_downloaded(self.title())?;
 
         self.episodes().par_iter().for_each(
             |ref i| if let Some(ep_title) =
@@ -196,13 +214,14 @@ impl Podcast {
                 }
             },
         );
+        Ok(())
     }
 
-    pub fn download_specific(&self, episode_numbers: Vec<usize>) {
+    pub fn download_specific(&self, episode_numbers: Vec<usize>) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
         path.push(self.title());
 
-        let downloaded = already_downloaded(self.title());
+        let downloaded = already_downloaded(self.title())?;
         let episodes = self.episodes();
 
         episode_numbers.par_iter().for_each(
@@ -216,6 +235,7 @@ impl Podcast {
                 }
             },
         );
+        Ok(())
     }
 }
 

@@ -1,9 +1,11 @@
 [package]
 name = "podcast"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["njaremko <njaremko@gmail.com>"]
 description = "A command line podcast player"
 license = "GPL-3.0"
+readme = "README.md"
+keywords = ["audio", "cli", "podcast", "music"]
 repository = "https://github.com/njaremko/podcast"
 
 [dependencies]

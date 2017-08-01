@@ -104,12 +104,19 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) {
 
     for subscription in &state.subs {
         if re_pod.is_match(&subscription.title) {
-            let podcast = Podcast::from_url(&subscription.url).unwrap();
-            match parse_download_episodes(e_search) {
-                Ok(episodes_to_download) => podcast.download_specific(episodes_to_download),
-                Err(err) => eprintln!("{}", err),
+            match Podcast::from_title(&subscription.title) {
+                Ok(podcast) => {
+                    match parse_download_episodes(e_search) {
+                        Ok(episodes_to_download) => {
+                            if let Err(err) = podcast.download_specific(episodes_to_download) {
+                                eprintln!("Error: {}", err);
+                            }
+                        }
+                        Err(err) => eprintln!("Error: {}", err),
+                    }
+                }
+                Err(err) => eprintln!("Error: {}", err),
             }
-            return;
         }
     }
 }
@@ -120,10 +127,14 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
 
     for subscription in &state.subs {
         if re_pod.is_match(&subscription.title) {
-            let podcast = Podcast::from_url(&subscription.url).unwrap();
-            let episodes = podcast.episodes();
-            if let Err(err) = episodes[episodes.len() - ep_num].download(podcast.title()) {
-                eprintln!("{}", err);
+            match Podcast::from_title(&subscription.title) {
+                Ok(podcast) => {
+                    let episodes = podcast.episodes();
+                    if let Err(err) = episodes[episodes.len() - ep_num].download(podcast.title()) {
+                        eprintln!("{}", err);
+                    }
+                }
+                Err(err) => eprintln!("Error: {}", err),
             }
         }
     }
@@ -134,8 +145,14 @@ pub fn download_all(state: &State, p_search: &str) {
 
     for subscription in &state.subs {
         if re_pod.is_match(&subscription.title) {
-            let podcast = Podcast::from_url(&subscription.url).unwrap();
-            podcast.download();
+            match Podcast::from_title(&subscription.title) {
+                Ok(podcast) => {
+                    if let Err(err) = podcast.download() {
+                        eprintln!("{}", err);
+                    }
+                }
+                Err(err) => eprintln!("Error: {}", err),
+            }
         }
     }
 }
@@ -143,8 +160,7 @@ pub fn download_all(state: &State, p_search: &str) {
 pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
     let re_pod = Regex::new(p_search).unwrap();
     let ep_num = ep_num_string.parse::<usize>().unwrap();
-    let mut path = get_podcast_dir();
-    path.push(".rss");
+    let mut path = get_xml_dir();
     if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
         eprintln!(
             "Couldn't create directory: {}\nReason: {}",
@@ -184,7 +200,7 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
 
 fn launch_player(url: &str) {
     if let Err(_) = launch_mpv(&url) {
-        launch_vlc(url)
+        launch_vlc(&url)
     }
 }
 
