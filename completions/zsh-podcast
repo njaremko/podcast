@@ -1,0 +1,35 @@
+#compdef podcast
+#autoload
+
+# Copyright (C) 2017:
+#    Nathan Jaremko <njaremko@gmail.com>
+# All Rights Reserved.
+# This file is licensed under the GPLv2+. Please see COPYING for more information.
+
+_podcast() {
+    local ret=1
+    _arguments -C \
+        '1: :_podcast_cmds' \
+        && ret=0
+}
+
+_podcast_cmds () {
+    local subcommands;
+    subcommands=(
+    "download:Download episodes of podcast"
+    "help:Prints this message or the help of the given subcommand(s)"
+    "ls:List podcasts or episodes of a podcast"
+    "play:Play episodes of a podcast"
+    "refresh:Refreshes subscribed podcasts"
+    "rm:Delete podcast"
+    "search:Searches for podcasts"
+    "subscribe:Subscribe to a podcast RSS feed"
+    "update:check for updates"
+    )
+    _describe -t commands 'podcast' subcommands
+    _arguments : \
+        "--version[Output version information]" \
+        "--help[Output help message]"
+}
+
+_podcast

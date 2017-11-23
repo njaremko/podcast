@@ -177,12 +177,10 @@ impl Podcast {
         path.push(filename);
 
         match File::open(&path) {
-            Ok(file) => {
-                match Channel::read_from(BufReader::new(file)) {
-                    Ok(podcast) => return Ok(Podcast::from(podcast)),
-                    Err(err) => return Err(format!("Error: {}", err)),
-                }
-            }
+            Ok(file) => match Channel::read_from(BufReader::new(file)) {
+                Ok(podcast) => return Ok(Podcast::from(podcast)),
+                Err(err) => return Err(format!("Error: {}", err)),
+            },
             Err(err) => return Err(format!("Error: {}", err)),
         }
     }
@@ -203,17 +201,15 @@ impl Podcast {
 
         let downloaded = already_downloaded(self.title())?;
 
-        self.episodes().par_iter().for_each(
-            |ref i| if let Some(ep_title) =
-                i.title()
-            {
+        self.episodes().par_iter().for_each(|ref i| {
+            if let Some(ep_title) = i.title() {
                 if !downloaded.contains(ep_title) {
                     if let Err(err) = i.download(self.title()) {
                         println!("{}", err);
                     }
                 }
-            },
-        );
+            }
+        });
         Ok(())
     }
 
@@ -224,17 +220,15 @@ impl Podcast {
         let downloaded = already_downloaded(self.title())?;
         let episodes = self.episodes();
 
-        episode_numbers.par_iter().for_each(
-            |ep_num| if let Some(ep_title) =
-                episodes[episodes.len() - ep_num].title()
-            {
+        episode_numbers.par_iter().for_each(|ep_num| {
+            if let Some(ep_title) = episodes[episodes.len() - ep_num].title() {
                 if !downloaded.contains(ep_title) {
                     if let Err(err) = episodes[episodes.len() - ep_num].download(self.title()) {
                         println!("{}", err);
                     }
                 }
-            },
-        );
+            }
+        });
         Ok(())
     }
 }
@@ -253,14 +247,12 @@ impl Episode {
 
     pub fn extension(&self) -> Option<&str> {
         match self.0.enclosure() {
-            Some(enclosure) => {
-                match enclosure.mime_type() {
-                    "audio/mpeg" => Some(".mp3"),
-                    "audio/mp4" => Some(".m4a"),
-                    "audio/ogg" => Some(".ogg"),
-                    _ => find_extension(self.url().unwrap()),
-                }
-            }
+            Some(enclosure) => match enclosure.mime_type() {
+                "audio/mpeg" => Some(".mp3"),
+                "audio/mp4" => Some(".m4a"),
+                "audio/ogg" => Some(".ogg"),
+                _ => find_extension(self.url().unwrap()),
+            },
             None => None,
         }
     }

@@ -10,7 +10,7 @@ use structs::*;
 use utils::*;
 
 pub fn list_episodes(search: &str) {
-    let re = Regex::new(search).unwrap();
+    let re = Regex::new(&format!("(?i){}", &search)).expect("Failed to parse regex");
     let mut path = get_podcast_dir();
     path.push(".rss");
     DirBuilder::new().recursive(true).create(&path).unwrap();
@@ -58,7 +58,7 @@ pub fn download_rss(url: &str, config: &Config) {
 
 pub fn update_rss(state: &mut State) {
     println!("Checking for new episodes...");
-    &state.subs.par_iter_mut().for_each(|mut sub| {
+    &state.subs.par_iter_mut().for_each(|sub| {
         let mut path = get_podcast_dir();
         path.push(&sub.title);
         DirBuilder::new().recursive(true).create(&path).unwrap();
@@ -85,8 +85,10 @@ pub fn update_rss(state: &mut State) {
         if podcast.episodes().len() > sub.num_episodes {
             &podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
                 .par_iter()
-                .for_each(|ref ep| if let Err(err) = ep.download(podcast.title()) {
-                    eprintln!("Error downloading {}: {}", podcast.title(), err);
+                .for_each(|ref ep| {
+                    if let Err(err) = ep.download(podcast.title()) {
+                        eprintln!("Error downloading {}: {}", podcast.title(), err);
+                    }
                 });
         }
         sub.num_episodes = podcast.episodes().len();
@@ -100,21 +102,19 @@ pub fn list_subscriptions(state: &State) {
 }
 
 pub fn download_range(state: &State, p_search: &str, e_search: &str) {
-    let re_pod = Regex::new(p_search).unwrap();
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");;
 
     for subscription in &state.subs {
         if re_pod.is_match(&subscription.title) {
             match Podcast::from_title(&subscription.title) {
-                Ok(podcast) => {
-                    match parse_download_episodes(e_search) {
-                        Ok(episodes_to_download) => {
-                            if let Err(err) = podcast.download_specific(episodes_to_download) {
-                                eprintln!("Error: {}", err);
-                            }
+                Ok(podcast) => match parse_download_episodes(e_search) {
+                    Ok(episodes_to_download) => {
+                        if let Err(err) = podcast.download_specific(episodes_to_download) {
+                            eprintln!("Error: {}", err);
                         }
-                        Err(err) => eprintln!("Error: {}", err),
                     }
-                }
+                    Err(err) => eprintln!("Error: {}", err),
+                },
                 Err(err) => eprintln!("Error: {}", err),
             }
         }
@@ -141,16 +141,14 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
 }
 
 pub fn download_all(state: &State, p_search: &str) {
-    let re_pod = Regex::new(p_search).unwrap();
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
 
     for subscription in &state.subs {
         if re_pod.is_match(&subscription.title) {
             match Podcast::from_title(&subscription.title) {
-                Ok(podcast) => {
-                    if let Err(err) = podcast.download() {
-                        eprintln!("{}", err);
-                    }
-                }
+                Ok(podcast) => if let Err(err) = podcast.download() {
+                    eprintln!("{}", err);
+                },
                 Err(err) => eprintln!("Error: {}", err),
             }
         }
@@ -158,7 +156,7 @@ pub fn download_all(state: &State, p_search: &str) {
 }
 
 pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
-    let re_pod = Regex::new(p_search).unwrap();
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
     let ep_num = ep_num_string.parse::<usize>().unwrap();
     let mut path = get_xml_dir();
     if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
@@ -196,6 +194,10 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
             return;
         }
     }
+}
+
+pub fn check_for_update(state: &mut State) {
+    println!("Checking for updates...");
 }
 
 fn launch_player(url: &str) {
