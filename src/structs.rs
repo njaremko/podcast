@@ -5,7 +5,7 @@ use reqwest;
 use rss::{self, Channel, Item};
 use serde_json;
 use std::collections::BTreeSet;
-use std::fs::{self, DirBuilder, File};
+use std::fs::{self, remove_dir_all, remove_file, DirBuilder, File};
 use std::io::{self, BufReader, Read, Write};
 use utils::*;
 use yaml_rust::YamlLoader;
@@ -183,6 +183,20 @@ impl Podcast {
             },
             Err(err) => return Err(format!("Error: {}", err)),
         }
+    }
+
+    pub fn delete(title: &str) -> io::Result<()> {
+        let mut path = get_xml_dir();
+        let mut filename = String::from(title);
+        filename.push_str(".xml");
+        path.push(filename);
+
+        return remove_file(path);
+    }
+
+    pub fn delete_all() -> io::Result<()> {
+        let path = get_xml_dir();
+        return remove_dir_all(path);
     }
 
     pub fn episodes(&self) -> Vec<Episode> {

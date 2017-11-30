@@ -7,6 +7,7 @@ extern crate rss;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate toml;
 extern crate yaml_rust;
 
 mod actions;
@@ -17,6 +18,8 @@ use actions::*;
 use clap::{App, Arg, SubCommand};
 use structs::*;
 use utils::*;
+
+const VERSION: &str = "0.4";
 
 fn main() {
     if let Err(err) = create_directories() {
@@ -32,7 +35,7 @@ fn main() {
     };
     let config = Config::new();
     let matches = App::new("podcast")
-        .version("0.4")
+        .version(VERSION)
         .author("Nathan J. <njaremko@gmail.com>")
         .about("A command line podcast manager")
         .subcommand(
@@ -92,8 +95,20 @@ fn main() {
         )
         .subcommand(SubCommand::with_name("refresh").about("refresh subscribed podcasts"))
         .subcommand(SubCommand::with_name("update").about("check for updates"))
-        .subcommand(SubCommand::with_name("rm").about("delete podcast"))
-        .subcommand(SubCommand::with_name("completions").about("install shell completions"))
+        .subcommand(
+            SubCommand::with_name("rm")
+                .about("unsubscribe from a podcast")
+                .arg(Arg::with_name("PODCAST").help("Podcast to delete").index(1)),
+        )
+        .subcommand(
+            SubCommand::with_name("completion")
+                .about("install shell completion")
+                .arg(
+                    Arg::with_name("SHELL")
+                        .help("Shell to print completion for")
+                        .index(1),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand_name() {
@@ -130,11 +145,23 @@ fn main() {
                 .unwrap(),
             &config,
         ),
-        Some("search") => (),
-        Some("rm") => (),
-        Some("completions") => (),
+        Some("search") => println!("This feature is coming soon..."),
+        Some("rm") => {
+            let rm_matches = matches.subcommand_matches("rm").unwrap();
+            match rm_matches.value_of("PODCAST") {
+                Some(regex) => remove_podcast(&mut state, regex),
+                None => println!(""),
+            }
+        }
+        Some("completion") => {
+            let matches = matches.subcommand_matches("completion").unwrap();
+            match matches.value_of("SHELL") {
+                Some(shell) => print_completion(shell),
+                None => print_completion(""),
+            }
+        }
         Some("refresh") => update_rss(&mut state),
-        Some("update") => check_for_update(&mut state),
+        Some("update") => check_for_update(VERSION),
         _ => (),
     }
     if let Err(err) = state.save() {

@@ -8,6 +8,7 @@ use std::io::{self, BufReader, Read, Write};
 use std::process::Command;
 use structs::*;
 use utils::*;
+use toml;
 
 pub fn list_episodes(search: &str) {
     let re = Regex::new(&format!("(?i){}", &search)).expect("Failed to parse regex");
@@ -102,7 +103,7 @@ pub fn list_subscriptions(state: &State) {
 }
 
 pub fn download_range(state: &State, p_search: &str, e_search: &str) {
-    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");;
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
 
     for subscription in &state.subs {
         if re_pod.is_match(&subscription.title) {
@@ -196,8 +197,24 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
     }
 }
 
-pub fn check_for_update(state: &mut State) {
+pub fn check_for_update(version: &str) {
     println!("Checking for updates...");
+    let resp: String = reqwest::get(
+        "https://raw.githubusercontent.com/njaremko/podcast/master/Cargo.toml",
+    ).unwrap()
+        .text()
+        .unwrap();
+
+    //println!("{}", resp);
+    match resp.parse::<toml::Value>() {
+        Ok(config) => {
+            let latest = config["package"]["version"].as_str().unwrap();
+             if version != latest {
+                println!("New version avaliable: {}", latest);
+             }
+            },
+        Err(err) => eprintln!("{}", err),
+    }
 }
 
 fn launch_player(url: &str) {
@@ -206,7 +223,7 @@ fn launch_player(url: &str) {
     }
 }
 
-fn launch_mpv(url: &str) -> Result<(), io::Error> {
+fn launch_mpv(url: &str) -> io::Result<()> {
     if let Err(err) = Command::new("mpv")
         .args(&["--audio-display=no", "--ytdl=no", url])
         .status()
@@ -230,5 +247,78 @@ fn launch_vlc(url: &str) {
             }
             _ => eprintln!("Error: {}", err),
         }
+    }
+}
+
+
+pub fn remove_podcast(state: &mut State, p_search: &str) {
+    if p_search == "*" {
+        match Podcast::delete_all() {
+            Ok(_) => println!("Success"),
+            Err(err) => eprintln!("Error: {}", err),
+        }
+        return;
+    }
+
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
+
+    for subscription in 0..state.subs.len() {
+        let title = state.subs[subscription].title.clone();
+        if re_pod.is_match(&title) {
+            state.subs.remove(subscription);
+            match Podcast::delete(&title) {
+                Ok(_) => println!("Success"),
+                Err(err) => eprintln!("Error: {}", err),
+            }
+            break;
+        }
+    }
+}
+
+pub fn print_completion(arg: &str) {
+    let zsh = r#"#compdef podcast
+#autoload
+
+# Copyright (C) 2017:
+#    Nathan Jaremko <njaremko@gmail.com>
+# All Rights Reserved.
+# This file is licensed under the GPLv2+. Please see COPYING for more information.
+
+_podcast() {
+    local ret=1
+    _arguments -C \
+        '1: :_podcast_cmds' \
+        && ret=0
+}
+
+_podcast_cmds () {
+    local subcommands;
+    subcommands=(
+    "download:Download episodes of podcast"
+    "help:Prints this message or the help of the given subcommand(s)"
+    "ls:List podcasts or episodes of a podcast"
+    "play:Play episodes of a podcast"
+    "refresh:Refreshes subscribed podcasts"
+    "rm:Unsubscribe from a podcast"
+    "completion:Shell Completions"
+    "search:Searches for podcasts"
+    "subscribe:Subscribe to a podcast RSS feed"
+    "update:check for updates"
+    )
+    _describe -t commands 'podcast' subcommands
+    _arguments : \
+        "--version[Output version information]" \
+        "--help[Output help message]"
+}
+
+_podcast"#;
+
+    //let bash = "";
+    //let sh = "";
+    match arg {
+        "zsh" => println!("{}", zsh),
+        //"bash" => println!("{}", bash),
+        //"sh" => println!("{}", sh),
+        _ => println!("Only options avaliable are: zsh"),
     }
 }
