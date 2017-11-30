@@ -59,7 +59,7 @@ pub fn download_rss(url: &str, config: &Config) {
 
 pub fn update_rss(state: &mut State) {
     println!("Checking for new episodes...");
-    &state.subs.par_iter_mut().for_each(|sub| {
+    &state.subscriptions.par_iter_mut().for_each(|sub| {
         let mut path = get_podcast_dir();
         path.push(&sub.title);
         DirBuilder::new().recursive(true).create(&path).unwrap();
@@ -105,7 +105,7 @@ pub fn list_subscriptions(state: &State) {
 pub fn download_range(state: &State, p_search: &str, e_search: &str) {
     let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
 
-    for subscription in &state.subs {
+    for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             match Podcast::from_title(&subscription.title) {
                 Ok(podcast) => match parse_download_episodes(e_search) {
@@ -126,7 +126,7 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
     let re_pod = Regex::new(p_search).unwrap();
     let ep_num = e_search.parse::<usize>().unwrap();
 
-    for subscription in &state.subs {
+    for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             match Podcast::from_title(&subscription.title) {
                 Ok(podcast) => {
@@ -144,7 +144,7 @@ pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
 pub fn download_all(state: &State, p_search: &str) {
     let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
 
-    for subscription in &state.subs {
+    for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             match Podcast::from_title(&subscription.title) {
                 Ok(podcast) => if let Err(err) = podcast.download() {
@@ -168,7 +168,7 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) {
         );
         return;
     }
-    for subscription in &state.subs {
+    for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let mut filename = subscription.title.clone();
             filename.push_str(".xml");
@@ -209,10 +209,10 @@ pub fn check_for_update(version: &str) {
     match resp.parse::<toml::Value>() {
         Ok(config) => {
             let latest = config["package"]["version"].as_str().unwrap();
-             if version != latest {
+            if version != latest {
                 println!("New version avaliable: {}", latest);
-             }
-            },
+            }
+        }
         Err(err) => eprintln!("{}", err),
     }
 }
@@ -262,10 +262,10 @@ pub fn remove_podcast(state: &mut State, p_search: &str) {
 
     let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
 
-    for subscription in 0..state.subs.len() {
-        let title = state.subs[subscription].title.clone();
+    for subscription in 0..state.subscriptions.len() {
+        let title = state.subscriptions[subscription].title.clone();
         if re_pod.is_match(&title) {
-            state.subs.remove(subscription);
+            state.subscriptions.remove(subscription);
             match Podcast::delete(&title) {
                 Ok(_) => println!("Success"),
                 Err(err) => eprintln!("Error: {}", err),

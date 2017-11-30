@@ -26,7 +26,7 @@ fn main() {
         eprintln!("{}", err);
         return;
     }
-    let mut state = match State::new() {
+    let mut state = match State::new(VERSION) {
         Ok(val) => val,
         Err(err) => {
             eprintln!("{}", err);

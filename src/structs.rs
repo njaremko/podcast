@@ -56,11 +56,12 @@ pub struct Subscription {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
     pub last_run_time: DateTime<Utc>,
-    pub subs: Vec<Subscription>,
+    pub subscriptions: Vec<Subscription>,
+    pub version: String,
 }
 
 impl State {
-    pub fn new() -> Result<State, String> {
+    pub fn new(version: &str) -> Result<State, String> {
         let mut path = get_podcast_dir();
         path.push(".subscriptions");
         if path.exists() {
@@ -74,12 +75,16 @@ impl State {
             };
             let mut state: State = match serde_json::from_str(&s) {
                 Ok(val) => val,
-                Err(err) => {
-                    return Err(format!(
-                        "Could not parse: {}\nReason: {}",
-                        &path.to_str().unwrap(),
-                        err
-                    ))
+                Err(_) => {
+                    let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+                    State {
+                        last_run_time: Utc::now(),
+                        subscriptions: match serde_json::from_value(v["subscriptions"].clone()) {
+                            Ok(val) => val,
+                            Err(_) => serde_json::from_value(v["subs"].clone()).unwrap(),
+                        },
+                        version: String::from(version),
+                    }
                 }
             };
             // Check if a day has passed (86400 seconds)
@@ -89,13 +94,15 @@ impl State {
                 .num_seconds() < -86400
             {
                 update_rss(&mut state);
+                check_for_update(&state.version);
             }
             state.last_run_time = Utc::now();
             Ok(state)
         } else {
             Ok(State {
                 last_run_time: Utc::now(),
-                subs: Vec::new(),
+                subscriptions: Vec::new(),
+                version: String::from(version),
             })
         }
     }
@@ -107,7 +114,7 @@ impl State {
         }
         let podcast = Podcast::from(Channel::from_url(url).unwrap());
         if !set.contains(podcast.title()) {
-            self.subs.push(Subscription {
+            self.subscriptions.push(Subscription {
                 title: String::from(podcast.title()),
                 url: String::from(url),
                 num_episodes: podcast.episodes().len(),
@@ -120,7 +127,7 @@ impl State {
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
-        self.subs.clone()
+        self.subscriptions.clone()
     }
 
     pub fn save(&self) -> Result<(), io::Error> {
