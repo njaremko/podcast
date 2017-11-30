@@ -8,7 +8,7 @@
 - [x] Subscribing to RSS feeds
 - [x] Unsubscribing from RSS feeds
 - [x] Streaming podcasts
-- [x] Concurrent downloading of multiple podcasts 
+- [x] Parallel downloading of multiple podcasts 
 - [x] Playing podcasts
 - [x] Auto-download new episodes
 - [x] Automatically check for updates
