@@ -55,9 +55,9 @@ pub struct Subscription {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct State {
+    pub version: String,
     pub last_run_time: DateTime<Utc>,
     pub subscriptions: Vec<Subscription>,
-    pub version: String,
 }
 
 impl State {
@@ -75,19 +75,20 @@ impl State {
             };
             let mut state: State = match serde_json::from_str(&s) {
                 Ok(val) => val,
+                // This will happen if the struct has changed between versions
                 Err(_) => {
                     let v: serde_json::Value = serde_json::from_str(&s).unwrap();
                     State {
+                        version: String::from(version),
                         last_run_time: Utc::now(),
                         subscriptions: match serde_json::from_value(v["subscriptions"].clone()) {
                             Ok(val) => val,
                             Err(_) => serde_json::from_value(v["subs"].clone()).unwrap(),
-                        },
-                        version: String::from(version),
+                        }, 
                     }
                 }
             };
-            // Check if a day has passed (86400 seconds)
+            // Check if a day has passed (86400 seconds) since last launch
             if state
                 .last_run_time
                 .signed_duration_since(Utc::now())
@@ -100,9 +101,9 @@ impl State {
             Ok(state)
         } else {
             Ok(State {
+                version: String::from(version),
                 last_run_time: Utc::now(),
                 subscriptions: Vec::new(),
-                version: String::from(version),
             })
         }
     }
