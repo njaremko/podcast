@@ -1,0 +1,17 @@
+0.4.3
+- Display correct version in help screen
+
+0.4.2
+- Changed the save format to include the current version to allow for automatic check for updates functionality
+
+0.4.1
+- Whoops, never actually published this...
+
+0.4.0
+- Update all dependencies to their latest respective versions
+- Add check for updates functionality
+- Add ability to unsubscribe from podcasts
+- Add ability to print zsh shell completion
+- Ignore case when checking podcast titles
+- rename update -> refresh
+- rename list -> ls 
