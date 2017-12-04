@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::env;
-use std::num::ParseIntError;
-use std::path::PathBuf;
 use std::fs::{self, DirBuilder};
 use std::io;
+use std::num::ParseIntError;
+use std::path::PathBuf;
 
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);

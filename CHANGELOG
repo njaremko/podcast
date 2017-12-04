@@ -1,3 +1,8 @@
+0.4.4
+- Add ability to play latest episode by omitting episode number
+- Fix update check working correctly
+- Fix download still being case-sensitive
+
 0.4.3
 - Display correct version in help screen
 
@@ -8,10 +13,10 @@
 - Whoops, never actually published this...
 
 0.4.0
-- Update all dependencies to their latest respective versions
-- Add check for updates functionality
-- Add ability to unsubscribe from podcasts
 - Add ability to print zsh shell completion
+- Add ability to unsubscribe from podcasts
+- Add check for updates functionality
 - Ignore case when checking podcast titles
-- rename update -> refresh
+- Update all dependencies to their latest respective versions
 - rename list -> ls 
+- rename update -> refresh

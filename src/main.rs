@@ -15,11 +15,12 @@ mod structs;
 mod utils;
 
 use actions::*;
-use clap::{App, Arg, SubCommand};
-use structs::*;
 use utils::*;
+use structs::*;
 
-const VERSION: &str = "0.4.3";
+use clap::{App, Arg, SubCommand};
+
+const VERSION: &str = "0.4.4";
 
 fn main() {
     if let Err(err) = create_directories() {
@@ -70,7 +71,7 @@ fn main() {
                 .arg(
                     Arg::with_name("EPISODE")
                         .help("Episode index")
-                        .required(true)
+                        .required(false)
                         .index(2),
                 ),
         )
@@ -134,8 +135,10 @@ fn main() {
         Some("play") => {
             let play_matches = matches.subcommand_matches("play").unwrap();
             let podcast = play_matches.value_of("PODCAST").unwrap();
-            let episode = play_matches.value_of("EPISODE").unwrap();
-            play_episode(&state, podcast, episode);
+            match play_matches.value_of("EPISODE") {
+                Some(episode) => play_episode(&state, podcast, episode),
+                None => play_latest(&state, podcast),
+            }
         }
         Some("subscribe") => state.subscribe(
             matches

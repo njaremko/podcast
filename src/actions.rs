@@ -1,13 +1,15 @@
-use rayon::prelude::*;
-use regex::Regex;
-use reqwest;
-use rss::Channel;
+use structs::*;
+use utils::*;
+
 use std::collections::HashSet;
 use std::fs::{self, DirBuilder, File};
 use std::io::{self, BufReader, Read, Write};
 use std::process::Command;
-use structs::*;
-use utils::*;
+
+use rayon::prelude::*;
+use regex::Regex;
+use reqwest;
+use rss::Channel;
 use toml;
 
 pub fn list_episodes(search: &str) {
@@ -123,7 +125,7 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) {
 }
 
 pub fn download_episode(state: &State, p_search: &str, e_search: &str) {
-    let re_pod = Regex::new(p_search).unwrap();
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
     let ep_num = e_search.parse::<usize>().unwrap();
 
     for subscription in &state.subscriptions {
@@ -152,6 +154,46 @@ pub fn download_all(state: &State, p_search: &str) {
                 },
                 Err(err) => eprintln!("Error: {}", err),
             }
+        }
+    }
+}
+
+pub fn play_latest(state: &State, p_search: &str) {
+    let re_pod = Regex::new(&format!("(?i){}", &p_search)).expect("Failed to parse regex");
+    let mut path = get_xml_dir();
+    if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
+        eprintln!(
+            "Couldn't create directory: {}\nReason: {}",
+            path.to_str().unwrap(),
+            err
+        );
+        return;
+    }
+    for subscription in &state.subscriptions {
+        if re_pod.is_match(&subscription.title) {
+            let mut filename = subscription.title.clone();
+            filename.push_str(".xml");
+            path.push(filename);
+
+            let mut file = File::open(&path).unwrap();
+            let mut content: Vec<u8> = Vec::new();
+            file.read_to_end(&mut content).unwrap();
+
+            let podcast = Podcast::from(Channel::read_from(content.as_slice()).unwrap());
+            let episodes = podcast.episodes();
+            let episode = episodes[0].clone();
+
+            filename = String::from(episode.title().unwrap());
+            filename.push_str(episode.extension().unwrap());
+            path = get_podcast_dir();
+            path.push(podcast.title());
+            path.push(filename);
+            if path.exists() {
+                launch_player(path.to_str().unwrap());
+            } else {
+                launch_player(episode.url().unwrap());
+            }
+            return;
         }
     }
 }
@@ -210,7 +252,7 @@ pub fn check_for_update(version: &str) {
         Ok(config) => {
             let latest = config["package"]["version"].as_str().unwrap();
             if version != latest {
-                println!("New version avaliable: {}", latest);
+                println!("New version avaliable: {} -> {}", version, latest);
             }
         }
         Err(err) => eprintln!("{}", err),

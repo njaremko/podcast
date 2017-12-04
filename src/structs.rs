@@ -1,13 +1,15 @@
 use actions::*;
+use utils::*;
+
+use std::collections::BTreeSet;
+use std::fs::{self, remove_dir_all, remove_file, DirBuilder, File};
+use std::io::{self, BufReader, Read, Write};
+
 use chrono::prelude::*;
 use rayon::prelude::*;
 use reqwest;
 use rss::{self, Channel, Item};
 use serde_json;
-use std::collections::BTreeSet;
-use std::fs::{self, remove_dir_all, remove_file, DirBuilder, File};
-use std::io::{self, BufReader, Read, Write};
-use utils::*;
 use yaml_rust::YamlLoader;
 
 pub struct Config {
@@ -84,10 +86,11 @@ impl State {
                         subscriptions: match serde_json::from_value(v["subscriptions"].clone()) {
                             Ok(val) => val,
                             Err(_) => serde_json::from_value(v["subs"].clone()).unwrap(),
-                        }, 
+                        },
                     }
                 }
             };
+            state.version = String::from(version);
             // Check if a day has passed (86400 seconds) since last launch
             if state
                 .last_run_time
@@ -98,6 +101,9 @@ impl State {
                 check_for_update(&state.version);
             }
             state.last_run_time = Utc::now();
+            if let Err(err) = state.save() {
+                eprintln!("{}", err);
+            }
             Ok(state)
         } else {
             Ok(State {
@@ -290,13 +296,18 @@ impl Episode {
                 let mut filename = String::from(title);
                 filename.push_str(self.extension().unwrap());
                 path.push(filename);
-                println!("Downloading: {}", path.to_str().unwrap());
-                let mut file = File::create(&path)?;
-                let mut resp = reqwest::get(url).unwrap();
-                let mut content: Vec<u8> = Vec::new();
-                resp.read_to_end(&mut content)?;
-                file.write_all(&content)?;
-                return Ok(());
+                if !path.exists() {
+                    println!("Downloading: {}", path.to_str().unwrap());
+                    let mut file = File::create(&path)?;
+                    let mut resp = reqwest::get(url).unwrap();
+                    let mut content: Vec<u8> = Vec::new();
+                    resp.read_to_end(&mut content)?;
+                    file.write_all(&content)?;
+                    return Ok(());
+                } else {
+                    println!("File already exists: {}", path.to_str().unwrap());
+                    return Ok(());
+                }
             }
         }
         Ok(())
