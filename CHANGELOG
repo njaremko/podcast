@@ -1,3 +1,7 @@
+0.4.5
+- Improve subscribe default behaviour
+    - Without an option, we'll just subscribe to them
+    - with -d or --download we will download according to auto-download limit in $PODCAST/.config
 0.4.4
 - Add ability to play latest episode by omitting episode number
 - Fix update check working correctly
