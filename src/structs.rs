@@ -114,7 +114,7 @@ impl State {
         }
     }
 
-    pub fn subscribe(&mut self, url: &str, config: &Config) {
+    pub fn subscribe(&mut self, url: &str) {
         let mut set = BTreeSet::new();
         for sub in self.subscriptions() {
             set.insert(sub.title);
@@ -130,7 +130,6 @@ impl State {
         if let Err(err) = self.save() {
             eprintln!("{}", err);
         }
-        download_rss(url, config);
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {

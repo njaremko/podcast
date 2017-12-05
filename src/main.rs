@@ -92,6 +92,12 @@ fn main() {
                         .help("URL to RSS feed")
                         .required(true)
                         .index(1),
+                )
+                .arg(
+                    Arg::with_name("download")
+                        .short("d")
+                        .long("download")
+                        .help("auto download based on config"),
                 ),
         )
         .subcommand(SubCommand::with_name("refresh").about("refresh subscribed podcasts"))
@@ -140,14 +146,16 @@ fn main() {
                 None => play_latest(&state, podcast),
             }
         }
-        Some("subscribe") => state.subscribe(
-            matches
-                .subcommand_matches("subscribe")
-                .unwrap()
-                .value_of("URL")
-                .unwrap(),
-            &config,
-        ),
+        Some("subscribe") => {
+            let subscribe_matches = matches.subcommand_matches("subscribe").unwrap();
+            let url = subscribe_matches.value_of("URL").unwrap();
+            state.subscribe(url);
+            if subscribe_matches.occurrences_of("download") > 0 {
+                download_rss(&config, url);
+            } else {
+                subscribe_rss(url);
+            }
+        }
         Some("search") => println!("This feature is coming soon..."),
         Some("rm") => {
             let rm_matches = matches.subcommand_matches("rm").unwrap();

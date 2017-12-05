@@ -32,30 +32,29 @@ pub fn list_episodes(search: &str) {
     }
 }
 
-pub fn download_rss(url: &str, config: &Config) {
+pub fn subscribe_rss(url: &str) {
     println!("Downloading RSS feed...");
-    let mut path = get_podcast_dir();
-    path.push(".rss");
-    DirBuilder::new().recursive(true).create(&path).unwrap();
-    let mut resp = reqwest::get(url).unwrap();
-    let mut content: Vec<u8> = Vec::new();
-    resp.read_to_end(&mut content).unwrap();
-    let channel = Channel::read_from(BufReader::new(&content[..])).unwrap();
-    let mut filename = String::from(channel.title());
-    filename.push_str(".xml");
-    path.push(filename);
-    let mut file = File::create(&path).unwrap();
-    file.write_all(&content).unwrap();
+    if let Err(err) = download_rss_feed(url) {
+        eprintln!("Error: {}", err);
+    }
+}
 
-    let download_limit = config.auto_download_limit as usize;
-    if download_limit > 0 {
-        let podcast = Podcast::from(channel);
-        let episodes = podcast.episodes();
-        &episodes[..download_limit].par_iter().for_each(|ref ep| {
-            if let Err(err) = ep.download(podcast.title()) {
-                eprintln!("Error downloading {}: {}", podcast.title(), err);
+pub fn download_rss(config: &Config, url: &str) {
+    println!("Downloading episode(s)...");
+    match download_rss_feed(url) {
+        Ok(channel) => {
+            let download_limit = config.auto_download_limit as usize;
+            if download_limit > 0 {
+                let podcast = Podcast::from(channel);
+                let episodes = podcast.episodes();
+                &episodes[..download_limit].par_iter().for_each(|ref ep| {
+                    if let Err(err) = ep.download(podcast.title()) {
+                        eprintln!("Error downloading {}: {}", podcast.title(), err);
+                    }
+                });
             }
-        });
+        }
+        Err(err) => eprintln!("Error: {}", err),
     }
 }
 

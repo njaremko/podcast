@@ -1,9 +1,12 @@
 use std::collections::HashSet;
 use std::env;
-use std::fs::{self, DirBuilder};
-use std::io;
+use std::fs::{self, DirBuilder, File};
+use std::io::{self, BufReader, Read, Write};
 use std::num::ParseIntError;
 use std::path::PathBuf;
+
+use reqwest;
+use rss::Channel;
 
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
@@ -88,6 +91,22 @@ pub fn get_xml_dir() -> PathBuf {
     let mut path = get_podcast_dir();
     path.push(".rss");
     path
+}
+
+pub fn download_rss_feed(url: &str) -> Result<Channel, String> {
+    let mut path = get_podcast_dir();
+    path.push(".rss");
+    DirBuilder::new().recursive(true).create(&path).unwrap();
+    let mut resp = reqwest::get(url).unwrap();
+    let mut content: Vec<u8> = Vec::new();
+    resp.read_to_end(&mut content).unwrap();
+    let channel = Channel::read_from(BufReader::new(&content[..])).unwrap();
+    let mut filename = String::from(channel.title());
+    filename.push_str(".xml");
+    path.push(filename);
+    let mut file = File::create(&path).unwrap();
+    file.write_all(&content).unwrap();
+    Ok(channel)
 }
 
 pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntError> {
