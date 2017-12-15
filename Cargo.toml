@@ -1,12 +1,21 @@
 [package]
 name = "podcast"
 version = "0.4.5"
-authors = ["njaremko <njaremko@gmail.com>"]
-description = "A command line podcast player"
+authors = ["Nathan Jaremko <njaremko@gmail.com>"]
+description = "A command line podcast manager"
 license = "GPL-3.0"
 readme = "README.md"
 keywords = ["audio", "cli", "podcast", "music"]
 repository = "https://github.com/njaremko/podcast"
+categories = ["command-line-utilities"]
+
+[badges]
+travis-ci = { repository = "njaremko/podcast" }
+
+[[bin]]
+bench = false
+path = "src/main.rs"
+name = "podcast"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
