@@ -14,14 +14,12 @@ use yaml_rust::YamlLoader;
 
 pub struct Config {
     pub auto_download_limit: i64,
-    pub auto_delete_limit: i64,
 }
 
 impl Config {
     pub fn new() -> Config {
         let mut path = get_podcast_dir();
         let mut download_limit = 1;
-        let mut delete_limit = 0;
         path.push(".config");
         if path.exists() {
             let mut s = String::new();
@@ -32,9 +30,6 @@ impl Config {
                 if let Some(val) = doc["auto_download_limit"].as_i64() {
                     download_limit = val;
                 }
-                if let Some(val) = doc["auto_delete_limit"].as_i64() {
-                    delete_limit = val;
-                }
             }
         } else {
             let mut file = File::create(&path).unwrap();
@@ -42,7 +37,6 @@ impl Config {
         }
         Config {
             auto_download_limit: download_limit,
-            auto_delete_limit: delete_limit,
         }
     }
 }
@@ -92,10 +86,9 @@ impl State {
             };
             state.version = String::from(version);
             // Check if a day has passed (86400 seconds) since last launch
-            if state
-                .last_run_time
-                .signed_duration_since(Utc::now())
-                .num_seconds() < -86400
+            if Utc::now()
+                .signed_duration_since(state.last_run_time)
+                .num_seconds() > 86400
             {
                 update_rss(&mut state);
                 check_for_update(&state.version);

@@ -1,3 +1,7 @@
+0.4.7
+- Add some tests
+- Improve handling of file extensions
+
 0.4.6
 - Add travis-ci support
 - Add category to cargo.toml

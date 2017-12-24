@@ -18,14 +18,16 @@ pub fn trim_extension(filename: &str) -> Option<String> {
 
 pub fn find_extension(input: &str) -> Option<&str> {
     let tmp = String::from(input);
-    if tmp.contains(".mp3") {
+    if tmp.ends_with(".mp3") {
         Some(".mp3")
-    } else if tmp.contains(".m4a") {
+    } else if tmp.ends_with(".m4a") {
         Some(".m4a")
-    } else if tmp.contains(".wav") {
+    } else if tmp.ends_with(".wav") {
         Some(".wav")
-    } else if tmp.contains(".ogg") {
+    } else if tmp.ends_with(".ogg") {
         Some(".ogg")
+    } else if tmp.ends_with(".opus") {
+        Some(".opus")
     } else {
         None
     }
@@ -134,4 +136,49 @@ pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntErr
     }
     elements.dedup();
     Ok(elements)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_extension_mp3() {
+        assert_eq!(find_extension("test.mp3"), Some(".mp3"))
+    }
+
+    #[test]
+    fn test_find_extension_m4a() {
+        assert_eq!(find_extension("test.m4a"), Some(".m4a"))
+    }
+
+    #[test]
+    fn test_find_extension_wav() {
+        assert_eq!(find_extension("test.wav"), Some(".wav"))
+    }
+
+    #[test]
+    fn test_find_extension_ogg() {
+        assert_eq!(find_extension("test.ogg"), Some(".ogg"))
+    }
+
+    #[test]
+    fn test_find_extension_opus() {
+        assert_eq!(find_extension("test.opus"), Some(".opus"))
+    }
+
+    #[test]
+    fn test_find_extension_invalid() {
+        assert_eq!(find_extension("test.taco"), None)
+    }
+
+    #[test]
+    fn test_trim_extension() {
+        assert_eq!(trim_extension("test.taco"), Some(String::from("test")))
+    }
+
+    #[test]
+    fn test_trim_extension_invalid() {
+        assert_eq!(trim_extension("test"), None)
+    }
 }
