@@ -291,7 +291,6 @@ fn launch_vlc(url: &str) {
     }
 }
 
-
 pub fn remove_podcast(state: &mut State, p_search: &str) {
     if p_search == "*" {
         match Podcast::delete_all() {

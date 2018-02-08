@@ -41,7 +41,6 @@ impl Config {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Subscription {
     pub title: String,
@@ -216,20 +215,39 @@ impl Podcast {
     }
 
     pub fn download(&self) -> Result<(), io::Error> {
+        print!("You are about to download all episodes (y/n): ");
+        io::stdout().flush().ok();
+        let mut input = String::new();
+        if let Ok(_) = io::stdin().read_line(&mut input) {
+            if input.to_lowercase().trim() != "y" {
+                return Ok(());
+            }
+        }
+
         let mut path = get_podcast_dir();
         path.push(self.title());
 
-        let downloaded = already_downloaded(self.title())?;
-
-        self.episodes().par_iter().for_each(|ref i| {
-            if let Some(ep_title) = i.title() {
-                if !downloaded.contains(ep_title) {
+        match already_downloaded(self.title()) {
+            Ok(downloaded) => {
+                self.episodes().par_iter().for_each(|ref i| {
+                    if let Some(ep_title) = i.title() {
+                        if !downloaded.contains(ep_title) {
+                            if let Err(err) = i.download(self.title()) {
+                                println!("{}", err);
+                            }
+                        }
+                    }
+                });
+            }
+            Err(_) => {
+                self.episodes().par_iter().for_each(|ref i| {
                     if let Err(err) = i.download(self.title()) {
                         println!("{}", err);
                     }
-                }
+                });
             }
-        });
+        }
+
         Ok(())
     }
 
@@ -276,7 +294,6 @@ impl Episode {
             None => None,
         }
     }
-
 
     pub fn download(&self, podcast_name: &str) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();

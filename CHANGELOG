@@ -1,3 +1,7 @@
+0.5.0
+- Fix downloading all episodes of podcast not working if folder didn't exist
+- Confirm before downloading all episodes of a podcast
+
 0.4.7
 - Add some tests
 - Improve handling of file extensions
