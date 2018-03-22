@@ -20,7 +20,7 @@ use structs::*;
 
 use clap::{App, Arg, SubCommand};
 
-const VERSION: &str = "0.5.0";
+const VERSION: &str = "0.5.1";
 
 fn main() {
     if let Err(err) = create_directories() {
