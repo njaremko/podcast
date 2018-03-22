@@ -20,7 +20,7 @@ use structs::*;
 
 use clap::{App, Arg, SubCommand};
 
-const VERSION: &str = "0.5.1";
+const VERSION: &str = "0.5.2";
 
 fn main() {
     if let Err(err) = create_directories() {
@@ -60,8 +60,17 @@ fn main() {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("play")
+            SubCommand::with_name("list")
                 .about("list episodes of podcast")
+                .arg(
+                    Arg::with_name("PODCAST")
+                        .help("Regex for subscribed podcast")
+                        .index(1),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("play")
+                .about("play an episode")
                 .arg(
                     Arg::with_name("PODCAST")
                         .help("Regex for subscribed podcast")
@@ -131,8 +140,11 @@ fn main() {
                 None => download_all(&state, podcast),
             }
         }
-        Some("ls") => {
-            let list_matches = matches.subcommand_matches("ls").unwrap();
+        Some("ls") | Some("list") => {
+            let list_matches = matches
+                .subcommand_matches("ls")
+                .or(matches.subcommand_matches("list"))
+                .unwrap();
             match list_matches.value_of("PODCAST") {
                 Some(regex) => list_episodes(regex),
                 None => list_subscriptions(&state),

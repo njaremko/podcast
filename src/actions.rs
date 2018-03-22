@@ -13,6 +13,9 @@ use rss::Channel;
 use toml;
 
 pub fn list_episodes(search: &str) {
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+
     let re = Regex::new(&format!("(?i){}", &search)).expect("Failed to parse regex");
     let mut path = get_podcast_dir();
     path.push(".rss");
@@ -25,7 +28,12 @@ pub fn list_episodes(search: &str) {
             let podcast = Podcast::from(channel);
             let episodes = podcast.episodes();
             for (num, ep) in episodes.iter().enumerate() {
-                println!("({}) {}", episodes.len() - num, ep.title().unwrap());
+                write!(
+                    &mut handle,
+                    "({}) {}\n",
+                    episodes.len() - num,
+                    ep.title().unwrap()
+                );
             }
             return;
         }
@@ -98,8 +106,10 @@ pub fn update_rss(state: &mut State) {
 }
 
 pub fn list_subscriptions(state: &State) {
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
     for podcast in &state.subscriptions() {
-        println!("{}", &podcast.title);
+        write!(&mut handle, "{}\n", &podcast.title);
     }
 }
 
