@@ -33,7 +33,7 @@ pub fn list_episodes(search: &str) {
                     "({}) {}\n",
                     episodes.len() - num,
                     ep.title().unwrap()
-                );
+                ).is_ok();
             }
             return;
         }
@@ -109,7 +109,7 @@ pub fn list_subscriptions(state: &State) {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
     for podcast in &state.subscriptions() {
-        write!(&mut handle, "{}\n", &podcast.title);
+        write!(&mut handle, "{}\n", &podcast.title).is_ok();
     }
 }
 
