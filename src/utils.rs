@@ -56,8 +56,7 @@ pub fn already_downloaded(dir: &str) -> Result<HashSet<String>, io::Error> {
     for entry in entries {
         let entry = entry?;
         match entry.file_name().into_string() {
-            Ok(val) => {
-                let name = String::from(val);
+            Ok(name) => {
                 let index = name.find('.').unwrap();
                 result.insert(String::from(&name[0..index]));
             }
@@ -118,7 +117,7 @@ pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntErr
     let comma_separated: Vec<&str> = input.split(',').collect();
     for elem in comma_separated {
         let temp = String::from(elem);
-        if temp.contains("-") {
+        if temp.contains('-') {
             let range: Vec<usize> = elem.split('-')
                 .map(|i| i.parse::<usize>().unwrap())
                 .collect();

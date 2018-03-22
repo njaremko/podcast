@@ -25,7 +25,7 @@ impl Config {
             let mut s = String::new();
             File::open(&path).unwrap().read_to_string(&mut s).unwrap();
             let config = YamlLoader::load_from_str(&s).unwrap();
-            if config.len() > 0 {
+            if !config.is_empty() {
                 let doc = &config[0];
                 if let Some(val) = doc["auto_download_limit"].as_i64() {
                     download_limit = val;
@@ -183,10 +183,10 @@ impl Podcast {
 
         match File::open(&path) {
             Ok(file) => match Channel::read_from(BufReader::new(file)) {
-                Ok(podcast) => return Ok(Podcast::from(podcast)),
-                Err(err) => return Err(format!("Error: {}", err)),
+                Ok(podcast) => Ok(Podcast::from(podcast)),
+                Err(err) => Err(format!("Error: {}", err)),
             },
-            Err(err) => return Err(format!("Error: {}", err)),
+            Err(err) => Err(format!("Error: {}", err)),
         }
     }
 
@@ -196,12 +196,12 @@ impl Podcast {
         filename.push_str(".xml");
         path.push(filename);
 
-        return remove_file(path);
+        remove_file(path)
     }
 
     pub fn delete_all() -> io::Result<()> {
         let path = get_xml_dir();
-        return remove_dir_all(path);
+        remove_dir_all(path)
     }
 
     pub fn episodes(&self) -> Vec<Episode> {
@@ -218,10 +218,8 @@ impl Podcast {
         print!("You are about to download all episodes (y/n): ");
         io::stdout().flush().ok();
         let mut input = String::new();
-        if let Ok(_) = io::stdin().read_line(&mut input) {
-            if input.to_lowercase().trim() != "y" {
-                return Ok(());
-            }
+        if io::stdin().read_line(&mut input).is_ok() && input.to_lowercase().trim() != "y" {
+            return Ok(());
         }
 
         let mut path = get_podcast_dir();
@@ -229,7 +227,7 @@ impl Podcast {
 
         match already_downloaded(self.title()) {
             Ok(downloaded) => {
-                self.episodes().par_iter().for_each(|ref i| {
+                self.episodes().par_iter().for_each(|i| {
                     if let Some(ep_title) = i.title() {
                         if !downloaded.contains(ep_title) {
                             if let Err(err) = i.download(self.title()) {
@@ -240,7 +238,7 @@ impl Podcast {
                 });
             }
             Err(_) => {
-                self.episodes().par_iter().for_each(|ref i| {
+                self.episodes().par_iter().for_each(|i| {
                     if let Err(err) = i.download(self.title()) {
                         println!("{}", err);
                     }
@@ -251,7 +249,7 @@ impl Podcast {
         Ok(())
     }
 
-    pub fn download_specific(&self, episode_numbers: Vec<usize>) -> Result<(), io::Error> {
+    pub fn download_specific(&self, episode_numbers: &[usize]) -> Result<(), io::Error> {
         let mut path = get_podcast_dir();
         path.push(self.title());
 

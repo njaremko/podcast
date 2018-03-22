@@ -47,7 +47,7 @@ pub fn download_rss(config: &Config, url: &str) {
             if download_limit > 0 {
                 let podcast = Podcast::from(channel);
                 let episodes = podcast.episodes();
-                &episodes[..download_limit].par_iter().for_each(|ref ep| {
+                episodes[..download_limit].par_iter().for_each(|ep| {
                     if let Err(err) = ep.download(podcast.title()) {
                         eprintln!("Error downloading {}: {}", podcast.title(), err);
                     }
@@ -60,7 +60,7 @@ pub fn download_rss(config: &Config, url: &str) {
 
 pub fn update_rss(state: &mut State) {
     println!("Checking for new episodes...");
-    &state.subscriptions.par_iter_mut().for_each(|sub| {
+    state.subscriptions.par_iter_mut().for_each(|sub| {
         let mut path = get_podcast_dir();
         path.push(&sub.title);
         DirBuilder::new().recursive(true).create(&path).unwrap();
@@ -85,9 +85,9 @@ pub fn update_rss(state: &mut State) {
         file.write_all(&content).unwrap();
 
         if podcast.episodes().len() > sub.num_episodes {
-            &podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
+            podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
                 .par_iter()
-                .for_each(|ref ep| {
+                .for_each(|ep| {
                     if let Err(err) = ep.download(podcast.title()) {
                         eprintln!("Error downloading {}: {}", podcast.title(), err);
                     }
@@ -111,7 +111,7 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) {
             match Podcast::from_title(&subscription.title) {
                 Ok(podcast) => match parse_download_episodes(e_search) {
                     Ok(episodes_to_download) => {
-                        if let Err(err) = podcast.download_specific(episodes_to_download) {
+                        if let Err(err) = podcast.download_specific(&episodes_to_download) {
                             eprintln!("Error: {}", err);
                         }
                     }
@@ -259,8 +259,8 @@ pub fn check_for_update(version: &str) {
 }
 
 fn launch_player(url: &str) {
-    if let Err(_) = launch_mpv(&url) {
-        launch_vlc(&url)
+    if launch_mpv(url).is_err() {
+        launch_vlc(url)
     }
 }
 

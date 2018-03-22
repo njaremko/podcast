@@ -161,7 +161,7 @@ fn main() {
             let rm_matches = matches.subcommand_matches("rm").unwrap();
             match rm_matches.value_of("PODCAST") {
                 Some(regex) => remove_podcast(&mut state, regex),
-                None => println!(""),
+                None => println!(),
             }
         }
         Some("completion") => {
