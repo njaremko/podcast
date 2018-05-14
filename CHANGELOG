@@ -1,3 +1,6 @@
+0.5.4
+- Improve error handling throughout the application (using error-chain)
+
 0.5.0
 - Fix downloading all episodes of podcast not working if folder didn't exist
 - Confirm before downloading all episodes of a podcast

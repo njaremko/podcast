@@ -1,14 +1,15 @@
 use actions::*;
+use errors::*;
 use utils::*;
 
 use std::collections::BTreeSet;
-use std::fs::{self, remove_dir_all, remove_file, DirBuilder, File};
+use std::fs::{self, DirBuilder, File};
 use std::io::{self, BufReader, Read, Write};
 
 use chrono::prelude::*;
 use rayon::prelude::*;
 use reqwest;
-use rss::{self, Channel, Item};
+use rss::{Channel, Item};
 use serde_json;
 use yaml_rust::YamlLoader;
 
@@ -17,14 +18,18 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Config {
-        let mut path = get_podcast_dir();
+    pub fn new() -> Result<Config> {
+        let mut path = get_podcast_dir()?;
         let mut download_limit = 1;
         path.push(".config");
         if path.exists() {
             let mut s = String::new();
-            File::open(&path).unwrap().read_to_string(&mut s).unwrap();
-            let config = YamlLoader::load_from_str(&s).unwrap();
+            File::open(&path)
+                .chain_err(|| UNABLE_TO_OPEN_FILE)?
+                .read_to_string(&mut s)
+                .chain_err(|| UNABLE_TO_READ_FILE_TO_STRING)?;
+            let config =
+                YamlLoader::load_from_str(&s).chain_err(|| "unable to load yaml from string")?;
             if !config.is_empty() {
                 let doc = &config[0];
                 if let Some(val) = doc["auto_download_limit"].as_i64() {
@@ -32,12 +37,13 @@ impl Config {
                 }
             }
         } else {
-            let mut file = File::create(&path).unwrap();
-            file.write_all(b"auto_download_limit: 1").unwrap();
+            let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+            file.write_all(b"auto_download_limit: 1")
+                .chain_err(|| UNABLE_TO_WRITE_FILE)?;
         }
-        Config {
+        Ok(Config {
             auto_download_limit: download_limit,
-        }
+        })
     }
 }
 
@@ -56,29 +62,27 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(version: &str) -> Result<State, String> {
-        let mut path = get_podcast_dir();
+    pub fn new(version: &str) -> Result<State> {
+        let mut path = get_podcast_dir()?;
         path.push(".subscriptions");
         if path.exists() {
             let mut s = String::new();
-            let mut file = match File::open(&path) {
-                Ok(val) => val,
-                Err(err) => return Err(format!("{}", err)),
-            };
-            if let Err(err) = file.read_to_string(&mut s) {
-                return Err(format!("{}", err));
-            };
+            let mut file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
+            file.read_to_string(&mut s)
+                .chain_err(|| UNABLE_TO_READ_FILE_TO_STRING)?;
             let mut state: State = match serde_json::from_str(&s) {
                 Ok(val) => val,
                 // This will happen if the struct has changed between versions
                 Err(_) => {
-                    let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+                    let v: serde_json::Value =
+                        serde_json::from_str(&s).chain_err(|| "unable to read json from string")?;
                     State {
                         version: String::from(version),
                         last_run_time: Utc::now(),
                         subscriptions: match serde_json::from_value(v["subscriptions"].clone()) {
                             Ok(val) => val,
-                            Err(_) => serde_json::from_value(v["subs"].clone()).unwrap(),
+                            Err(_) => serde_json::from_value(v["subs"].clone())
+                                .chain_err(|| "unable to parse value from json")?,
                         },
                     }
                 }
@@ -90,12 +94,10 @@ impl State {
                 .num_seconds() > 86400
             {
                 update_rss(&mut state);
-                check_for_update(&state.version);
+                check_for_update(&state.version)?;
             }
             state.last_run_time = Utc::now();
-            if let Err(err) = state.save() {
-                eprintln!("{}", err);
-            }
+            state.save()?;
             Ok(state)
         } else {
             Ok(State {
@@ -106,7 +108,7 @@ impl State {
         }
     }
 
-    pub fn subscribe(&mut self, url: &str) {
+    pub fn subscribe(&mut self, url: &str) -> Result<()> {
         let mut set = BTreeSet::new();
         for sub in self.subscriptions() {
             set.insert(sub.title);
@@ -119,22 +121,21 @@ impl State {
                 num_episodes: podcast.episodes().len(),
             });
         }
-        if let Err(err) = self.save() {
-            eprintln!("{}", err);
-        }
+        self.save()
     }
 
     pub fn subscriptions(&self) -> Vec<Subscription> {
         self.subscriptions.clone()
     }
 
-    pub fn save(&self) -> Result<(), io::Error> {
-        let mut path = get_podcast_dir();
+    pub fn save(&self) -> Result<()> {
+        let mut path = get_podcast_dir()?;
         path.push(".subscriptions.tmp");
-        let serialized = serde_json::to_string(self)?;
-        let mut file = File::create(&path)?;
-        file.write_all(serialized.as_bytes())?;
-        fs::rename(&path, get_sub_file())?;
+        let serialized = serde_json::to_string(self).chain_err(|| "unable to serialize state")?;
+        let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+        file.write_all(serialized.as_bytes())
+            .chain_err(|| UNABLE_TO_WRITE_FILE)?;
+        fs::rename(&path, get_sub_file()?).chain_err(|| "unable to rename file")?;
         Ok(())
     }
 }
@@ -168,61 +169,57 @@ impl Podcast {
     }
 
     #[allow(dead_code)]
-    pub fn from_url(url: &str) -> Result<Podcast, rss::Error> {
-        match Channel::from_url(url) {
-            Ok(val) => Ok(Podcast::from(val)),
-            Err(err) => Err(err),
-        }
+    pub fn from_url(url: &str) -> Result<Podcast> {
+        Ok(
+            Podcast::from(Channel::from_url(url).chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE)?),
+        )
     }
 
-    pub fn from_title(title: &str) -> Result<Podcast, String> {
-        let mut path = get_xml_dir();
+    pub fn from_title(title: &str) -> Result<Podcast> {
+        let mut path = get_xml_dir()?;
         let mut filename = String::from(title);
         filename.push_str(".xml");
         path.push(filename);
 
-        match File::open(&path) {
-            Ok(file) => match Channel::read_from(BufReader::new(file)) {
-                Ok(podcast) => Ok(Podcast::from(podcast)),
-                Err(err) => Err(format!("Error: {}", err)),
-            },
-            Err(err) => Err(format!("Error: {}", err)),
-        }
+        let file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
+        Ok(Podcast::from(Channel::read_from(BufReader::new(file))
+            .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_FILE)?))
     }
 
-    pub fn delete(title: &str) -> io::Result<()> {
-        let mut path = get_xml_dir();
+    pub fn delete(title: &str) -> Result<()> {
+        let mut path = get_xml_dir()?;
         let mut filename = String::from(title);
         filename.push_str(".xml");
         path.push(filename);
 
-        remove_file(path)
+        fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
     }
 
-    pub fn delete_all() -> io::Result<()> {
-        let path = get_xml_dir();
-        remove_dir_all(path)
+    pub fn delete_all() -> Result<()> {
+        let path = get_xml_dir()?;
+        fs::remove_dir_all(path).chain_err(|| UNABLE_TO_READ_DIRECTORY)
     }
 
     pub fn episodes(&self) -> Vec<Episode> {
         let mut result = Vec::new();
-
-        let items = self.0.items().to_vec();
-        for item in items {
+        for item in self.0.items().to_vec() {
             result.push(Episode::from(item));
         }
         result
     }
 
-    pub fn download(&self) -> Result<(), io::Error> {
+    pub fn download(&self) -> Result<()> {
         print!("You are about to download all episodes (y/n): ");
         io::stdout().flush().ok();
         let mut input = String::new();
-        if io::stdin().read_line(&mut input).is_ok() && input.to_lowercase().trim() != "y" {
+        io::stdin()
+            .read_line(&mut input)
+            .chain_err(|| "unable to read stdin")?;
+        if input.to_lowercase().trim() != "y" {
             return Ok(());
         }
 
-        let mut path = get_podcast_dir();
+        let mut path = get_podcast_dir()?;
         path.push(self.title());
 
         match already_downloaded(self.title()) {
@@ -231,7 +228,7 @@ impl Podcast {
                     if let Some(ep_title) = i.title() {
                         if !downloaded.contains(ep_title) {
                             if let Err(err) = i.download(self.title()) {
-                                println!("{}", err);
+                                eprintln!("{}", err);
                             }
                         }
                     }
@@ -240,7 +237,7 @@ impl Podcast {
             Err(_) => {
                 self.episodes().par_iter().for_each(|i| {
                     if let Err(err) = i.download(self.title()) {
-                        println!("{}", err);
+                        eprintln!("{}", err);
                     }
                 });
             }
@@ -249,8 +246,8 @@ impl Podcast {
         Ok(())
     }
 
-    pub fn download_specific(&self, episode_numbers: &[usize]) -> Result<(), io::Error> {
-        let mut path = get_podcast_dir();
+    pub fn download_specific(&self, episode_numbers: &[usize]) -> Result<()> {
+        let mut path = get_podcast_dir()?;
         path.push(self.title());
 
         let downloaded = already_downloaded(self.title())?;
@@ -282,38 +279,41 @@ impl Episode {
     }
 
     pub fn extension(&self) -> Option<&str> {
-        match self.0.enclosure() {
-            Some(enclosure) => match enclosure.mime_type() {
-                "audio/mpeg" => Some(".mp3"),
-                "audio/mp4" => Some(".m4a"),
-                "audio/ogg" => Some(".ogg"),
-                _ => find_extension(self.url().unwrap()),
-            },
-            None => None,
+        match self.0.enclosure()?.mime_type() {
+            "audio/mpeg" => Some(".mp3"),
+            "audio/mp4" => Some(".m4a"),
+            "audio/ogg" => Some(".ogg"),
+            _ => find_extension(self.url().unwrap()),
         }
     }
 
-    pub fn download(&self, podcast_name: &str) -> Result<(), io::Error> {
-        let mut path = get_podcast_dir();
+    pub fn download(&self, podcast_name: &str) -> Result<()> {
+        let mut path = get_podcast_dir()?;
         path.push(podcast_name);
-        DirBuilder::new().recursive(true).create(&path).unwrap();
+        DirBuilder::new()
+            .recursive(true)
+            .create(&path)
+            .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
 
         if let Some(url) = self.url() {
             if let Some(title) = self.title() {
                 let mut filename = String::from(title);
-                filename.push_str(self.extension().unwrap());
+                filename.push_str(self.extension()
+                    .chain_err(|| "unable to retrieve extension")?);
                 path.push(filename);
                 if !path.exists() {
                     println!("Downloading: {}", path.to_str().unwrap());
-                    let mut file = File::create(&path)?;
-                    let mut resp = reqwest::get(url).unwrap();
+                    let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+                    let mut resp = reqwest::get(url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
                     let mut content: Vec<u8> = Vec::new();
-                    resp.read_to_end(&mut content)?;
-                    file.write_all(&content)?;
-                    return Ok(());
+                    resp.read_to_end(&mut content)
+                        .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
+                    file.write_all(&content).chain_err(|| UNABLE_TO_WRITE_FILE)?;
                 } else {
-                    println!("File already exists: {}", path.to_str().unwrap());
-                    return Ok(());
+                    println!(
+                        "File already exists: {}",
+                        path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?
+                    );
                 }
             }
         }

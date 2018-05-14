@@ -1,19 +1,34 @@
 use std::collections::HashSet;
 use std::env;
 use std::fs::{self, DirBuilder, File};
-use std::io::{self, BufReader, Read, Write};
-use std::num::ParseIntError;
+use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
 
+use errors::*;
 use reqwest;
 use rss::Channel;
 
+pub const UNABLE_TO_PARSE_REGEX: &'static str = "unable to parse regex";
+pub const UNABLE_TO_OPEN_FILE: &'static str = "unable to open file";
+pub const UNABLE_TO_CREATE_FILE: &'static str = "unable to create file";
+pub const UNABLE_TO_WRITE_FILE: &'static str = "unable to write file";
+pub const UNABLE_TO_READ_FILE_TO_STRING: &'static str = "unable to read file to string";
+pub const UNABLE_TO_READ_DIRECTORY: &'static str = "unable to read directory";
+pub const UNABLE_TO_READ_ENTRY: &'static str = "unable to read entry";
+pub const UNABLE_TO_CREATE_DIRECTORY: &'static str = "unable to create directory";
+pub const UNABLE_TO_READ_RESPONSE_TO_END: &'static str = "unable to read response to end";
+pub const UNABLE_TO_GET_HTTP_RESPONSE: &'static str = "unable to get http response";
+pub const UNABLE_TO_CONVERT_TO_STR: &'static str = "unable to convert to &str";
+pub const UNABLE_TO_REMOVE_FILE: &'static str = "unable to remove file";
+pub const UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE: &'static str =
+    "unable to create channel from http response";
+pub const UNABLE_TO_CREATE_CHANNEL_FROM_FILE: &'static str =
+    "unable to create channel from xml file";
+pub const UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE: &'static str = "unable to retrieve podcast by title";
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
-    match name.rfind('.') {
-        Some(index) => Some(String::from(&name[0..index])),
-        None => None,
-    }
+    let index = name.rfind('.')?;
+    Some(String::from(&name[0..index]))
 }
 
 pub fn find_extension(input: &str) -> Option<&str> {
@@ -33,35 +48,42 @@ pub fn find_extension(input: &str) -> Option<&str> {
     }
 }
 
-pub fn create_directories() -> Result<(), String> {
-    let mut path = get_podcast_dir();
-    path.push(".rss");
-    if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
-        return Err(format!(
-            "Couldn't create directory: {}\nReason: {}",
-            path.to_str().unwrap(),
-            err
-        ));
+pub fn get_podcast_dir() -> Result<PathBuf> {
+    match env::var_os("PODCAST") {
+        Some(val) => Ok(PathBuf::from(val)),
+        None => {
+            let mut path = env::home_dir().chain_err(|| "Couldn't find your home directory")?;
+            path.push("Podcasts");
+            Ok(path)
+        }
     }
-    Ok(())
 }
 
-pub fn already_downloaded(dir: &str) -> Result<HashSet<String>, io::Error> {
+pub fn create_directories() -> Result<()> {
+    let mut path = get_podcast_dir()?;
+    path.push(".rss");
+    DirBuilder::new()
+        .recursive(true)
+        .create(&path)
+        .chain_err(|| "unable to create directory")
+}
+
+pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
     let mut result = HashSet::new();
 
-    let mut path = get_podcast_dir();
+    let mut path = get_podcast_dir()?;
     path.push(dir);
 
-    let entries = fs::read_dir(path)?;
+    let entries = fs::read_dir(path).chain_err(|| "unable to read directory")?;
     for entry in entries {
-        let entry = entry?;
+        let entry = entry.chain_err(|| "unable to read entry")?;
         match entry.file_name().into_string() {
             Ok(name) => {
-                let index = name.find('.').unwrap();
+                let index = name.find('.').chain_err(|| "unable to find string index")?;
                 result.insert(String::from(&name[0..index]));
             }
             Err(_) => {
-                println!(
+                eprintln!(
                     "OsString: {:?} couldn't be converted to String",
                     entry.file_name()
                 );
@@ -71,46 +93,41 @@ pub fn already_downloaded(dir: &str) -> Result<HashSet<String>, io::Error> {
     Ok(result)
 }
 
-pub fn get_podcast_dir() -> PathBuf {
-    match env::var_os("PODCAST") {
-        Some(val) => PathBuf::from(val),
-        None => {
-            let mut path = env::home_dir().expect("Couldn't find your home directory");
-            path.push("Podcasts");
-            path
-        }
-    }
-}
-
-pub fn get_sub_file() -> PathBuf {
-    let mut path = get_podcast_dir();
+pub fn get_sub_file() -> Result<PathBuf> {
+    let mut path = get_podcast_dir()?;
     path.push(".subscriptions");
-    path
+    Ok(path)
 }
 
-pub fn get_xml_dir() -> PathBuf {
-    let mut path = get_podcast_dir();
+pub fn get_xml_dir() -> Result<PathBuf> {
+    let mut path = get_podcast_dir()?;
     path.push(".rss");
-    path
+    Ok(path)
 }
 
-pub fn download_rss_feed(url: &str) -> Result<Channel, String> {
-    let mut path = get_podcast_dir();
+pub fn download_rss_feed(url: &str) -> Result<Channel> {
+    let mut path = get_podcast_dir()?;
     path.push(".rss");
-    DirBuilder::new().recursive(true).create(&path).unwrap();
-    let mut resp = reqwest::get(url).unwrap();
+    DirBuilder::new()
+        .recursive(true)
+        .create(&path)
+        .chain_err(|| "unable to open directory")?;
+    let mut resp = reqwest::get(url).chain_err(|| "unable to open url")?;
     let mut content: Vec<u8> = Vec::new();
-    resp.read_to_end(&mut content).unwrap();
-    let channel = Channel::read_from(BufReader::new(&content[..])).unwrap();
+    resp.read_to_end(&mut content)
+        .chain_err(|| "unable to read http response to end")?;
+    let channel = Channel::read_from(BufReader::new(&content[..]))
+        .chain_err(|| "unable to create channel from xml http response")?;
     let mut filename = String::from(channel.title());
     filename.push_str(".xml");
     path.push(filename);
-    let mut file = File::create(&path).unwrap();
-    file.write_all(&content).unwrap();
+    let mut file = File::create(&path).chain_err(|| "unable to create file")?;
+    file.write_all(&content)
+        .chain_err(|| "unable to write file")?;
     Ok(channel)
 }
 
-pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntError> {
+pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>> {
     let input = String::from(e_search);
     let mut ranges = Vec::<(usize, usize)>::new();
     let mut elements = Vec::<usize>::new();
@@ -119,11 +136,13 @@ pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>, ParseIntErr
         let temp = String::from(elem);
         if temp.contains('-') {
             let range: Vec<usize> = elem.split('-')
-                .map(|i| i.parse::<usize>().unwrap())
-                .collect();
+                .map(|i| i.parse::<usize>().chain_err(|| "unable to parse number"))
+                .collect::<Result<Vec<usize>>>()
+                .chain_err(|| "unable to collect ranges")?;
             ranges.push((range[0], range[1]));
         } else {
-            elements.push(elem.parse::<usize>()?);
+            elements.push(elem.parse::<usize>()
+                .chain_err(|| "unable to parse number")?);
         }
     }
 
