@@ -1,4 +1,5 @@
 /target/
 /.idea/
+/rls/
 **/*.rs.bk
 *.lock
