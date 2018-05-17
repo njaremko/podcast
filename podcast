@@ -1,0 +1,20 @@
+.\" Manpage for podcast.
+.\" Contact njaremko@gmail.com to correct errors or typos.
+.TH PODCAST 1 "17 May 2018" "1.0" "podcast man page"
+.SH NAME
+podcast \- podcast manager
+.SH SYNOPSIS
+podcast [--help] [-v | --version] <command>
+.SH DESCRIPTION
+podcast is a command line podcast manager
+
+It handles all the basics. It can subscribe to rss feeds, download and play podcasts, and slightly more.
+.SH OPTIONS
+--help
+\t \t Prints the synopsis and a list of the most commonly used commands.
+.SH SEE ALSO
+
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Nathan Jaremko (njaremko@gmail.com)
