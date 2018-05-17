@@ -12,16 +12,15 @@
 - [x] Playing podcasts
 - [x] Auto-download new episodes
 - [x] Automatically check for updates
-- [ ] Auto-delete old episodes
 - [ ] Shell Completions
     - [x] zsh
     - [ ] bash
     - [ ] sh
 - [ ] Searching for podcasts...(WIP)
 
-By default, podcasts are downloaded to $HOME/Podcasts, but this folder can be set with the $PODCASTS environmental variable.
+By default, podcasts are downloaded to $HOME/Podcasts, but this folder can be set with the $PODCAST environmental variable.
 
-How many latest episodes to download when subscibing to new podcasts can be set in the $PODCASTS/.config YAML file
+How many latest episodes to download when subscibing to new podcasts can be set in the $PODCAST/.config YAML file
 
 Downloads can be done a variety of ways:
 

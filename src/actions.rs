@@ -264,7 +264,9 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) -> Resul
             if path.exists() {
                 launch_player(path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?)?;
             } else {
-                launch_player(episode.url().chain_err(|| "unable to retrieve episode url")?)?;
+                launch_player(episode
+                    .url()
+                    .chain_err(|| "unable to retrieve episode url")?)?;
             }
             return Ok(());
         }

@@ -67,9 +67,11 @@ impl State {
         path.push(".subscriptions");
         if path.exists() {
             let mut s = String::new();
-            let mut file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
-            file.read_to_string(&mut s)
-                .chain_err(|| UNABLE_TO_READ_FILE_TO_STRING)?;
+            {
+                let mut file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
+                file.read_to_string(&mut s)
+                    .chain_err(|| UNABLE_TO_READ_FILE_TO_STRING)?;
+            }
             let mut state: State = match serde_json::from_str(&s) {
                 Ok(val) => val,
                 // This will happen if the struct has changed between versions
@@ -132,9 +134,11 @@ impl State {
         let mut path = get_podcast_dir()?;
         path.push(".subscriptions.tmp");
         let serialized = serde_json::to_string(self).chain_err(|| "unable to serialize state")?;
-        let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
-        file.write_all(serialized.as_bytes())
-            .chain_err(|| UNABLE_TO_WRITE_FILE)?;
+        {
+            let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+            file.write_all(serialized.as_bytes())
+                .chain_err(|| UNABLE_TO_WRITE_FILE)?;
+        }
         fs::rename(&path, get_sub_file()?).chain_err(|| "unable to rename file")?;
         Ok(())
     }

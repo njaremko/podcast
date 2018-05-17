@@ -1,3 +1,6 @@
+0.5.5
+- Attempt at better handling file handles to fix windows bug regarding renaming .subscriptions.tmp
+
 0.5.4
 - Improve error handling throughout the application (using error-chain)
 
