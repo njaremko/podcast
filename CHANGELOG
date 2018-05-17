@@ -1,3 +1,6 @@
+0.5.8
+- Update regex crate to 1.0
+
 0.5.7
 - Updates filename escaping to generally only affect Windows (because Microsoft filesystems can't handle a bunch of characters)
 
