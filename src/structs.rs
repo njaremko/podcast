@@ -8,10 +8,15 @@ use std::io::{self, BufReader, Read, Write};
 
 use chrono::prelude::*;
 use rayon::prelude::*;
+use regex::Regex;
 use reqwest;
 use rss::{Channel, Item};
 use serde_json;
 use yaml_rust::YamlLoader;
+
+lazy_static! {
+    static ref FILENAME_ESCAPE: Regex = Regex::new(r#"[\\/:*?"<>|]"#).unwrap();
+}
 
 pub struct Config {
     pub auto_download_limit: i64,
@@ -230,7 +235,7 @@ impl Podcast {
             Ok(downloaded) => {
                 self.episodes().par_iter().for_each(|i| {
                     if let Some(ep_title) = i.title() {
-                        if !downloaded.contains(ep_title) {
+                        if !downloaded.contains(&ep_title) {
                             if let Err(err) = i.download(self.title()) {
                                 eprintln!("{}", err);
                             }
@@ -259,7 +264,7 @@ impl Podcast {
 
         episode_numbers.par_iter().for_each(|ep_num| {
             if let Some(ep_title) = episodes[episodes.len() - ep_num].title() {
-                if !downloaded.contains(ep_title) {
+                if !downloaded.contains(&ep_title) {
                     if let Err(err) = episodes[episodes.len() - ep_num].download(self.title()) {
                         println!("{}", err);
                     }
@@ -271,8 +276,8 @@ impl Podcast {
 }
 
 impl Episode {
-    pub fn title(&self) -> Option<&str> {
-        self.0.title()
+    pub fn title(&self) -> Option<String> {
+        Some(FILENAME_ESCAPE.replace_all(self.0.title()?, "_").to_string())
     }
 
     pub fn url(&self) -> Option<&str> {

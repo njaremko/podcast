@@ -1,3 +1,6 @@
+0.5.6
+- Escape filenames to prevent issues on some filesystems
+
 0.5.5
 - Attempt at better handling file handles to fix windows bug regarding renaming .subscriptions.tmp
 

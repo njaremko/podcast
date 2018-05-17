@@ -1,6 +1,6 @@
 [package]
 name = "podcast"
-version = "0.5.5"
+version = "0.5.6"
 authors = ["Nathan Jaremko <njaremko@gmail.com>"]
 description = "A command line podcast manager"
 license = "GPL-3.0"
@@ -21,6 +21,7 @@ name = "podcast"
 chrono = { version = "0.4", features = ["serde"] }
 clap = "2.28"
 error-chain = "0.11"
+lazy_static = "1.0"
 rayon = "0.9"
 regex = "0.2"
 reqwest = "0.8"

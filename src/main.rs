@@ -4,6 +4,8 @@ extern crate chrono;
 extern crate clap;
 #[macro_use]
 extern crate error_chain;
+#[macro_use]
+extern crate lazy_static;
 extern crate rayon;
 extern crate regex;
 extern crate reqwest;
@@ -29,7 +31,7 @@ use utils::*;
 
 use clap::{App, Arg, SubCommand};
 
-const VERSION: &str = "0.5.5";
+const VERSION: &str = "0.5.6";
 
 fn main() -> Result<()> {
     create_directories().chain_err(|| "unable to create directories")?;
