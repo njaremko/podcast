@@ -1,3 +1,6 @@
+0.5.7
+- Updates filename escaping to generally only affect Windows (because Microsoft filesystems can't handle a bunch of characters)
+
 0.5.6
 - Escape filenames to prevent issues on some filesystems
 

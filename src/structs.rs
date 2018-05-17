@@ -14,8 +14,15 @@ use rss::{Channel, Item};
 use serde_json;
 use yaml_rust::YamlLoader;
 
+#[cfg(target_os = "macos")]
+static ESCAPE_REGEX: &str = r"/";
+#[cfg(target_os = "linux")]
+static ESCAPE_REGEX: &str = r"/";
+#[cfg(target_os = "windows")]
+static ESCAPE_REGEX: &str = r#"[\\/:*?"<>|]"#;
+
 lazy_static! {
-    static ref FILENAME_ESCAPE: Regex = Regex::new(r#"[\\/:*?"<>|]"#).unwrap();
+    static ref FILENAME_ESCAPE: Regex = Regex::new(ESCAPE_REGEX).unwrap();
 }
 
 pub struct Config {
