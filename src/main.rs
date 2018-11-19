@@ -1,7 +1,9 @@
+#![feature(nll)]
 #![recursion_limit = "1024"]
 
 extern crate chrono;
 extern crate clap;
+extern crate dirs;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
@@ -16,22 +18,22 @@ extern crate serde_json;
 extern crate toml;
 extern crate yaml_rust;
 
-mod actions;
-mod structs;
-mod utils;
-mod errors {
+pub mod actions;
+pub mod structs;
+pub mod utils;
+pub mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain!{}
 }
 
-use actions::*;
-use errors::*;
-use structs::*;
-use utils::*;
+use self::actions::*;
+use self::errors::*;
+use self::structs::*;
+use self::utils::*;
 
 use clap::{App, Arg, SubCommand};
 
-const VERSION: &str = "0.5.10";
+const VERSION: &str = "0.6.0";
 
 fn main() -> Result<()> {
     create_directories().chain_err(|| "unable to create directories")?;
@@ -138,18 +140,20 @@ fn main() -> Result<()> {
                 .value_of("PODCAST")
                 .chain_err(|| "unable to find subcommand match")?;
             match download_matches.value_of("EPISODE") {
-                Some(ep) => if String::from(ep).contains(|c| c == '-' || c == ',') {
-                    download_range(&state, podcast, ep)?
-                } else {
-                    download_episode(&state, podcast, ep)?
-                },
+                Some(ep) => {
+                    if String::from(ep).contains(|c| c == '-' || c == ',') {
+                        download_range(&state, podcast, ep)?
+                    } else {
+                        download_episode(&state, podcast, ep)?
+                    }
+                }
                 None => download_all(&state, podcast)?,
             }
         }
         Some("ls") | Some("list") => {
             let list_matches = matches
                 .subcommand_matches("ls")
-                .or(matches.subcommand_matches("list"))
+                .or_else(|| matches.subcommand_matches("list"))
                 .chain_err(|| "unable to find subcommand matches")?;
             match list_matches.value_of("PODCAST") {
                 Some(regex) => list_episodes(regex)?,

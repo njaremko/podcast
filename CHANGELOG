@@ -1,3 +1,9 @@
+0.6.0
+- Update to rust 2018 edition
+
+0.5.11
+- Code cleanup
+
 0.5.10
 - Fix update check functionality
 

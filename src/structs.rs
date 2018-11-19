@@ -1,6 +1,6 @@
-use actions::*;
-use errors::*;
-use utils::*;
+use super::actions::*;
+use super::utils::*;
+use crate::errors::*;
 
 use std::collections::BTreeSet;
 use std::fs::{self, DirBuilder, File};
@@ -105,7 +105,8 @@ impl State {
             // Check if a day has passed (86400 seconds) since last launch
             if Utc::now()
                 .signed_duration_since(state.last_run_time)
-                .num_seconds() > 86400
+                .num_seconds()
+                > 86400
             {
                 update_rss(&mut state);
                 check_for_update(&state.version)?;
@@ -186,9 +187,9 @@ impl Podcast {
 
     #[allow(dead_code)]
     pub fn from_url(url: &str) -> Result<Podcast> {
-        Ok(
-            Podcast::from(Channel::from_url(url).chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE)?),
-        )
+        Ok(Podcast::from(
+            Channel::from_url(url).chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE)?,
+        ))
     }
 
     pub fn from_title(title: &str) -> Result<Podcast> {
@@ -198,8 +199,10 @@ impl Podcast {
         path.push(filename);
 
         let file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
-        Ok(Podcast::from(Channel::read_from(BufReader::new(file))
-            .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_FILE)?))
+        Ok(Podcast::from(
+            Channel::read_from(BufReader::new(file))
+                .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_FILE)?,
+        ))
     }
 
     pub fn delete(title: &str) -> Result<()> {
@@ -284,7 +287,11 @@ impl Podcast {
 
 impl Episode {
     pub fn title(&self) -> Option<String> {
-        Some(FILENAME_ESCAPE.replace_all(self.0.title()?, "_").to_string())
+        Some(
+            FILENAME_ESCAPE
+                .replace_all(self.0.title()?, "_")
+                .to_string(),
+        )
     }
 
     pub fn url(&self) -> Option<&str> {
@@ -313,9 +320,11 @@ impl Episode {
 
         if let Some(url) = self.url() {
             if let Some(title) = self.title() {
-                let mut filename = String::from(title);
-                filename.push_str(self.extension()
-                    .chain_err(|| "unable to retrieve extension")?);
+                let mut filename = title;
+                filename.push_str(
+                    self.extension()
+                        .chain_err(|| "unable to retrieve extension")?,
+                );
                 path.push(filename);
                 if !path.exists() {
                     println!("Downloading: {}", path.to_str().unwrap());
@@ -324,7 +333,8 @@ impl Episode {
                     let mut content: Vec<u8> = Vec::new();
                     resp.read_to_end(&mut content)
                         .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
-                    file.write_all(&content).chain_err(|| UNABLE_TO_WRITE_FILE)?;
+                    file.write_all(&content)
+                        .chain_err(|| UNABLE_TO_WRITE_FILE)?;
                 } else {
                     println!(
                         "File already exists: {}",

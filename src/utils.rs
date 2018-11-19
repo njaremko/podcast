@@ -4,27 +4,27 @@ use std::fs::{self, DirBuilder, File};
 use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
 
-use errors::*;
+use crate::errors::*;
+use dirs;
 use reqwest;
 use rss::Channel;
 
-pub const UNABLE_TO_PARSE_REGEX: &'static str = "unable to parse regex";
-pub const UNABLE_TO_OPEN_FILE: &'static str = "unable to open file";
-pub const UNABLE_TO_CREATE_FILE: &'static str = "unable to create file";
-pub const UNABLE_TO_WRITE_FILE: &'static str = "unable to write file";
-pub const UNABLE_TO_READ_FILE_TO_STRING: &'static str = "unable to read file to string";
-pub const UNABLE_TO_READ_DIRECTORY: &'static str = "unable to read directory";
-pub const UNABLE_TO_READ_ENTRY: &'static str = "unable to read entry";
-pub const UNABLE_TO_CREATE_DIRECTORY: &'static str = "unable to create directory";
-pub const UNABLE_TO_READ_RESPONSE_TO_END: &'static str = "unable to read response to end";
-pub const UNABLE_TO_GET_HTTP_RESPONSE: &'static str = "unable to get http response";
-pub const UNABLE_TO_CONVERT_TO_STR: &'static str = "unable to convert to &str";
-pub const UNABLE_TO_REMOVE_FILE: &'static str = "unable to remove file";
-pub const UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE: &'static str =
+pub const UNABLE_TO_PARSE_REGEX: &str = "unable to parse regex";
+pub const UNABLE_TO_OPEN_FILE: &str = "unable to open file";
+pub const UNABLE_TO_CREATE_FILE: &str = "unable to create file";
+pub const UNABLE_TO_WRITE_FILE: &str = "unable to write file";
+pub const UNABLE_TO_READ_FILE_TO_STRING: &str = "unable to read file to string";
+pub const UNABLE_TO_READ_DIRECTORY: &str = "unable to read directory";
+pub const UNABLE_TO_READ_ENTRY: &str = "unable to read entry";
+pub const UNABLE_TO_CREATE_DIRECTORY: &str = "unable to create directory";
+pub const UNABLE_TO_READ_RESPONSE_TO_END: &str = "unable to read response to end";
+pub const UNABLE_TO_GET_HTTP_RESPONSE: &str = "unable to get http response";
+pub const UNABLE_TO_CONVERT_TO_STR: &str = "unable to convert to &str";
+pub const UNABLE_TO_REMOVE_FILE: &str = "unable to remove file";
+pub const UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE: &str =
     "unable to create channel from http response";
-pub const UNABLE_TO_CREATE_CHANNEL_FROM_FILE: &'static str =
-    "unable to create channel from xml file";
-pub const UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE: &'static str = "unable to retrieve podcast by title";
+pub const UNABLE_TO_CREATE_CHANNEL_FROM_FILE: &str = "unable to create channel from xml file";
+pub const UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE: &str = "unable to retrieve podcast by title";
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
     let index = name.rfind('.')?;
@@ -52,7 +52,7 @@ pub fn get_podcast_dir() -> Result<PathBuf> {
     match env::var_os("PODCAST") {
         Some(val) => Ok(PathBuf::from(val)),
         None => {
-            let mut path = env::home_dir().chain_err(|| "Couldn't find your home directory")?;
+            let mut path = dirs::home_dir().chain_err(|| "Couldn't find your home directory")?;
             path.push("Podcasts");
             Ok(path)
         }
@@ -135,20 +135,23 @@ pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>> {
     for elem in comma_separated {
         let temp = String::from(elem);
         if temp.contains('-') {
-            let range: Vec<usize> = elem.split('-')
+            let range: Vec<usize> = elem
+                .split('-')
                 .map(|i| i.parse::<usize>().chain_err(|| "unable to parse number"))
                 .collect::<Result<Vec<usize>>>()
                 .chain_err(|| "unable to collect ranges")?;
             ranges.push((range[0], range[1]));
         } else {
-            elements.push(elem.parse::<usize>()
-                .chain_err(|| "unable to parse number")?);
+            elements.push(
+                elem.parse::<usize>()
+                    .chain_err(|| "unable to parse number")?,
+            );
         }
     }
 
     for range in ranges {
         // Add 1 to upper range to include given episode in the download
-        for num in range.0..range.1 + 1 {
+        for num in range.0..=range.1 {
             elements.push(num);
         }
     }

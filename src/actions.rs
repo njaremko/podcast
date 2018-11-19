@@ -1,12 +1,12 @@
-use structs::*;
-use utils::*;
+use super::structs::*;
+use super::utils::*;
 
 use std::collections::HashSet;
 use std::fs::{self, DirBuilder, File};
 use std::io::{self, BufReader, Read, Write};
 use std::process::Command;
 
-use errors::*;
+use crate::errors::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest;
@@ -34,12 +34,14 @@ pub fn list_episodes(search: &str) -> Result<()> {
             let podcast = Podcast::from(channel);
             let episodes = podcast.episodes();
             for (num, ep) in episodes.iter().enumerate() {
-                write!(
+                writeln!(
                     &mut handle,
-                    "({}) {}\n",
+                    "({}) {}",
                     episodes.len() - num,
-                    ep.title().chain_err(|| "unable to retrieve episode title")?
-                ).chain_err(|| "unable to write to stdout")?
+                    ep.title()
+                        .chain_err(|| "unable to retrieve episode title")?
+                )
+                .chain_err(|| "unable to write to stdout")?
             }
             return Ok(());
         }
@@ -79,18 +81,19 @@ pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
     let mut titles = HashSet::new();
     for entry in fs::read_dir(&path).chain_err(|| UNABLE_TO_READ_DIRECTORY)? {
         let unwrapped_entry = &entry.chain_err(|| UNABLE_TO_READ_ENTRY)?;
-        titles.insert(trim_extension(&unwrapped_entry
-            .file_name()
-            .into_string()
-            .unwrap()));
+        titles.insert(trim_extension(
+            &unwrapped_entry.file_name().into_string().unwrap(),
+        ));
     }
 
     let mut resp = reqwest::get(&sub.url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
     let mut content: Vec<u8> = Vec::new();
     resp.read_to_end(&mut content)
         .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
-    let podcast = Podcast::from(Channel::read_from(BufReader::new(&content[..]))
-        .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE)?);
+    let podcast = Podcast::from(
+        Channel::read_from(BufReader::new(&content[..]))
+            .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE)?,
+    );
     path = get_podcast_dir()?;
     path.push(".rss");
 
@@ -126,7 +129,7 @@ pub fn list_subscriptions(state: &State) -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
     for podcast in &state.subscriptions() {
-        write!(&mut handle, "{}\n", &podcast.title).chain_err(|| "unable to write to stdout")?;
+        writeln!(&mut handle, "{}", &podcast.title).chain_err(|| "unable to write to stdout")?;
     }
     Ok(())
 }
@@ -201,27 +204,35 @@ pub fn play_latest(state: &State, p_search: &str) -> Result<()> {
             file.read_to_end(&mut content)
                 .chain_err(|| "unable to read file to end")?;
 
-            let podcast: Podcast = Podcast::from(Channel::read_from(content.as_slice())
-                .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_FILE)?);
+            let podcast: Podcast = Podcast::from(
+                Channel::read_from(content.as_slice())
+                    .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_FILE)?,
+            );
             let episodes = podcast.episodes();
             let episode = episodes[0].clone();
 
-            filename = String::from(episode
+            filename = episode
                 .title()
-                .chain_err(|| "unable to retrieve episode name")?);
-            filename.push_str(episode
-                .extension()
-                .chain_err(|| "unable to retrieve episode extension")?);
+                .chain_err(|| "unable to retrieve episode name")?;
+            filename.push_str(
+                episode
+                    .extension()
+                    .chain_err(|| "unable to retrieve episode extension")?,
+            );
             path = get_podcast_dir()?;
             path.push(podcast.title());
             path.push(filename);
             if path.exists() {
-                launch_player(path.to_str()
-                    .chain_err(|| "unable to convert path to &str")?)?;
+                launch_player(
+                    path.to_str()
+                        .chain_err(|| "unable to convert path to &str")?,
+                )?;
             } else {
-                launch_player(episode
-                    .url()
-                    .chain_err(|| "unable to retrieve episode url")?)?;
+                launch_player(
+                    episode
+                        .url()
+                        .chain_err(|| "unable to retrieve episode url")?,
+                )?;
             }
             return Ok(());
         }
@@ -256,7 +267,7 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) -> Resul
             let episodes = podcast.episodes();
             let episode = episodes[episodes.len() - ep_num].clone();
 
-            filename = String::from(episode.title().unwrap());
+            filename = episode.title().unwrap();
             filename.push_str(episode.extension().unwrap());
             path = get_podcast_dir()?;
             path.push(podcast.title());
@@ -264,9 +275,11 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) -> Resul
             if path.exists() {
                 launch_player(path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?)?;
             } else {
-                launch_player(episode
-                    .url()
-                    .chain_err(|| "unable to retrieve episode url")?)?;
+                launch_player(
+                    episode
+                        .url()
+                        .chain_err(|| "unable to retrieve episode url")?,
+                )?;
             }
             return Ok(());
         }
@@ -276,14 +289,15 @@ pub fn play_episode(state: &State, p_search: &str, ep_num_string: &str) -> Resul
 
 pub fn check_for_update(version: &str) -> Result<()> {
     println!("Checking for updates...");
-    let resp: String = reqwest::get(
-        "https://raw.githubusercontent.com/njaremko/podcast/master/Cargo.toml",
-    ).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?
-        .text()
-        .chain_err(|| "unable to convert response to text")?;
+    let resp: String =
+        reqwest::get("https://raw.githubusercontent.com/njaremko/podcast/master/Cargo.toml")
+            .chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?
+            .text()
+            .chain_err(|| "unable to convert response to text")?;
 
     //println!("{}", resp);
-    let config = resp.parse::<toml::Value>()
+    let config = resp
+        .parse::<toml::Value>()
         .chain_err(|| "unable to parse toml")?;
     let latest = config["package"]["version"]
         .as_str()
