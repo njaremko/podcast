@@ -33,3 +33,21 @@ Individually: `podcast download $podcast_name 4`
 Multiple: `podcast download $podcast_name 1,5,9-12,14`
 
 All: `podcast download $podcast_name`
+
+You can also use a portion of the name. 
+Podcast will pick the first podcast alphabetically that contains the given word (Case-Insensitive).
+
+Example Usage:
+```sh
+$ podcast subscribe "http://feeds.feedburner.com/mbmbam"
+$ podcast ls bro # List all the episodes of My Brother, My Brother, and Me
+(447) MBMBaM 440: The Naming of 2019
+(446) MBMBaM 439: Face 2 Face: Candlenights 2018
+...
+(2) My Brother, My Brother and Me: Episode 02
+(1) My Brother, My Brother and Me: Episode 01
+$ podcast play bro # Play the latest episode of mbmbam
+$ podcast play "my brother" 446 # Play "MBMBaM 439: Face 2 Face: Candlenights 2018"
+$ podcast download bro # Download all episodes of mbmbam
+
+```
