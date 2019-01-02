@@ -40,6 +40,8 @@ Podcast will pick the first podcast alphabetically that contains the given word 
 Example Usage:
 ```sh
 $ podcast subscribe "http://feeds.feedburner.com/mbmbam"
+$ podcast ls
+My Brother, My Brother And Me
 $ podcast ls bro # List all the episodes of My Brother, My Brother, and Me
 (447) MBMBaM 440: The Naming of 2019
 (446) MBMBaM 439: Face 2 Face: Candlenights 2018
