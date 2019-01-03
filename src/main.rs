@@ -22,7 +22,7 @@ pub mod structs;
 pub mod utils;
 pub mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
-    error_chain!{}
+    error_chain! {}
 }
 
 use self::actions::*;
@@ -51,7 +51,26 @@ fn main() -> Result<()> {
                         .required(true)
                         .index(1),
                 )
-                .arg(Arg::with_name("EPISODE").help("Episode index").index(2)),
+                .arg(
+                    Arg::with_name("EPISODE")
+                        .required(false)
+                        .help("Episode index")
+                        .index(2),
+                )
+                .arg(
+                    Arg::with_name("name")
+                        .short("e")
+                        .long("episode")
+                        .help("Download using episode name instead of number")
+                        .required(false),
+                )
+                .arg(
+                    Arg::with_name("all")
+                        .short("a")
+                        .long("all")
+                        .help("Download all matching episodes")
+                        .required(false),
+                ),
         )
         .subcommand(
             SubCommand::with_name("ls")
@@ -85,6 +104,13 @@ fn main() -> Result<()> {
                         .help("Episode index")
                         .required(false)
                         .index(2),
+                )
+                .arg(
+                    Arg::with_name("name")
+                        .short("e")
+                        .long("episode")
+                        .help("Play using episode name instead of number")
+                        .required(false),
                 ),
         )
         .subcommand(
@@ -142,8 +168,15 @@ fn main() -> Result<()> {
                 Some(ep) => {
                     if String::from(ep).contains(|c| c == '-' || c == ',') {
                         download_range(&state, podcast, ep)?
+                    } else if download_matches.occurrences_of("name") > 0 {
+                        download_episode_by_name(
+                            &state,
+                            podcast,
+                            ep,
+                            download_matches.occurrences_of("all") > 0,
+                        )?
                     } else {
-                        download_episode(&state, podcast, ep)?
+                        download_episode_by_num(&state, podcast, ep)?
                     }
                 }
                 None => download_all(&state, podcast)?,
@@ -167,7 +200,13 @@ fn main() -> Result<()> {
                 .value_of("PODCAST")
                 .chain_err(|| "unable to find subcommand match")?;
             match play_matches.value_of("EPISODE") {
-                Some(episode) => play_episode(&state, podcast, episode)?,
+                Some(episode) => {
+                    if play_matches.occurrences_of("name") > 0 {
+                        play_episode_by_name(&state, podcast, episode)?
+                    } else {
+                        play_episode_by_num(&state, podcast, episode)?
+                    }
+                }
                 None => play_latest(&state, podcast)?,
             }
         }
