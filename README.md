@@ -51,5 +51,12 @@ $ podcast ls bro # List all the episodes of My Brother, My Brother, and Me
 $ podcast play bro # Play the latest episode of mbmbam
 $ podcast play "my brother" 446 # Play "MBMBaM 439: Face 2 Face: Candlenights 2018"
 $ podcast download bro # Download all episodes of mbmbam
-
+$ podcast download brother -e "The Naming" # Download the latest episode containing "The Naming"
+Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 440: The Naming of 2019.mp3
+$ podcast download bro 44 -e -a # Download all episodes containing "44"
+File already exists: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 440: The Naming of 2019.mp3
+Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 344: The Cream Beams to the Tower of Flavortown.mp3
+Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 244: Slimefoot.mp3
+Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 144: Kick it Forward.mp3
+Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/My Brother, My Brother and Me 44: Chunk Pump.mp3
 ```
