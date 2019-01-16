@@ -32,7 +32,7 @@ use self::utils::*;
 
 use clap::{App, Arg, SubCommand};
 
-const VERSION: &str = "0.7.4";
+const VERSION: &str = "0.7.5";
 
 fn main() -> Result<()> {
     create_directories().chain_err(|| "unable to create directories")?;

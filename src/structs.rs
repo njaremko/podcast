@@ -228,7 +228,7 @@ impl Podcast {
     }
 
     pub fn download(&self) -> Result<()> {
-        print!("You are about to download all episodes (y/n): ");
+        print!("You are about to download all episodes of {} (y/n): ", self.title());
         io::stdout().flush().ok();
         let mut input = String::new();
         io::stdin()
