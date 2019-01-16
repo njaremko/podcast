@@ -276,7 +276,7 @@ impl Podcast {
             if let Some(ep_title) = episodes[episodes.len() - ep_num].title() {
                 if !downloaded.contains(&ep_title) {
                     if let Err(err) = episodes[episodes.len() - ep_num].download(self.title()) {
-                        println!("{}", err);
+                        eprintln!("{}", err);
                     }
                 }
             }
@@ -311,6 +311,8 @@ impl Episode {
     }
 
     pub fn download(&self, podcast_name: &str) -> Result<()> {
+        let stdout = io::stdout();
+
         let mut path = get_podcast_dir()?;
         path.push(podcast_name);
         DirBuilder::new()
@@ -327,7 +329,10 @@ impl Episode {
                 );
                 path.push(filename);
                 if !path.exists() {
-                    println!("Downloading: {}", path.to_str().unwrap());
+                    {
+                        let mut handle = stdout.lock();
+                        writeln!(&mut handle, "Downloading: {}", path.to_str().unwrap()).ok();
+                    }
                     let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
                     let mut resp = reqwest::get(url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
                     let mut content: Vec<u8> = Vec::new();
@@ -336,10 +341,8 @@ impl Episode {
                     file.write_all(&content)
                         .chain_err(|| UNABLE_TO_WRITE_FILE)?;
                 } else {
-                    println!(
-                        "File already exists: {}",
-                        path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?
-                    );
+                    let mut handle = stdout.lock();
+                    writeln!(&mut handle, "File already exists: {}", path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?).ok();
                 }
             }
         }

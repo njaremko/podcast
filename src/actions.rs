@@ -15,9 +15,6 @@ use std::path::PathBuf;
 use toml;
 
 pub fn list_episodes(search: &str) -> Result<()> {
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-
     let re = Regex::new(&format!("(?i){}", &search)).chain_err(|| UNABLE_TO_PARSE_REGEX)?;
     let mut path = get_podcast_dir()?;
     path.push(".rss");
@@ -33,6 +30,8 @@ pub fn list_episodes(search: &str) -> Result<()> {
                 .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_FILE)?;
             let podcast = Podcast::from(channel);
             let episodes = podcast.episodes();
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
             for (num, ep) in episodes.iter().enumerate() {
                 writeln!(
                     &mut handle,
@@ -41,7 +40,7 @@ pub fn list_episodes(search: &str) -> Result<()> {
                     ep.title()
                         .chain_err(|| "unable to retrieve episode title")?
                 )
-                .chain_err(|| "unable to write to stdout")?
+                .ok();
             }
             return Ok(());
         }
@@ -129,7 +128,7 @@ pub fn list_subscriptions(state: &State) -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
     for podcast in &state.subscriptions() {
-        writeln!(&mut handle, "{}", &podcast.title).chain_err(|| "unable to write to stdout")?;
+        writeln!(&mut handle, "{}", &podcast.title).ok();
     }
     Ok(())
 }
@@ -166,8 +165,12 @@ pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) ->
             }
         }
     } else {
-        println!("Failed to parse episode number...");
-        println!("Attempting to find episode by name...");
+        {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            writeln!(&mut handle, "Failed to parse episode number...").ok();
+            writeln!(&mut handle, "Attempting to find episode by name...").ok();
+        }
         download_episode_by_name(state, p_search, e_search, false)
             .chain_err(|| "Failed to download episode.")?;
     }
@@ -198,7 +201,7 @@ pub fn download_episode_by_name(
                     })
                     .for_each(|ep| {
                         ep.download(podcast.title()).unwrap_or_else(|_| {
-                            println!("Error downloading episode: {}", podcast.title())
+                            eprintln!("Error downloading episode: {}", podcast.title())
                         });
                     })
             } else {
@@ -337,8 +340,12 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
             }
         }
     } else {
-        println!("Failed to parse episode number...");
-        println!("Attempting to find episode by name...");
+        {
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            writeln!(&mut handle, "Failed to parse episode number...").ok();
+            writeln!(&mut handle, "Attempting to find episode by name...").ok();
+        }
         play_episode_by_name(state, p_search, ep_num_string)
             .chain_err(|| "Failed to play episode by name.")?;
     }
