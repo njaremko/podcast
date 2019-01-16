@@ -59,14 +59,14 @@ impl Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Subscription {
     pub title: String,
     pub url: String,
     pub num_episodes: usize,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct State {
     pub version: String,
     pub last_run_time: DateTime<Utc>,
@@ -157,10 +157,10 @@ impl State {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Podcast(Channel);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Episode(Item);
 
 impl From<Channel> for Podcast {

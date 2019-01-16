@@ -202,7 +202,8 @@ pub fn download_episode_by_name(
                     .filter(|ep| {
                         ep.title()
                             .unwrap_or_else(|| "".to_string())
-                            .contains(e_search)
+                            .to_lowercase()
+                            .contains(&e_search.to_lowercase())
                     })
                     .collect();
 
@@ -362,7 +363,8 @@ pub fn play_episode_by_name(state: &State, p_search: &str, ep_string: &str) -> R
                 .filter(|ep| {
                     ep.title()
                         .unwrap_or_else(|| "".to_string())
-                        .contains(ep_string)
+                        .to_lowercase()
+                        .contains(&ep_string.to_lowercase())
                 })
                 .collect();
             if let Some(episode) = filtered_episodes.first() {
