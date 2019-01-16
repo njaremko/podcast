@@ -153,20 +153,25 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) -> Result<(
 
 pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) -> Result<()> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search)).chain_err(|| UNABLE_TO_PARSE_REGEX)?;
-    let ep_num = e_search
-        .parse::<usize>()
-        .chain_err(|| "unable to parse number")?;
 
-    for subscription in &state.subscriptions {
-        if re_pod.is_match(&subscription.title) {
-            let podcast = Podcast::from_title(&subscription.title)
-                .chain_err(|| UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE)?;
-            let episodes = podcast.episodes();
-            episodes[episodes.len() - ep_num]
-                .download(podcast.title())
-                .chain_err(|| "unable to download episode")?;
+    if let Ok(ep_num) = e_search.parse::<usize>() {
+        for subscription in &state.subscriptions {
+            if re_pod.is_match(&subscription.title) {
+                let podcast = Podcast::from_title(&subscription.title)
+                    .chain_err(|| UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE)?;
+                let episodes = podcast.episodes();
+                episodes[episodes.len() - ep_num]
+                    .download(podcast.title())
+                    .chain_err(|| "unable to download episode")?;
+            }
         }
+    } else {
+        println!("Failed to parse episode number...");
+        println!("Attempting to find episode by name...");
+        download_episode_by_name(state, p_search, e_search, false)
+            .chain_err(|| "Failed to download episode.")?;
     }
+
     Ok(())
 }
 
@@ -290,46 +295,52 @@ pub fn play_latest(state: &State, p_search: &str) -> Result<()> {
 pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -> Result<()> {
     let re_pod: Regex =
         Regex::new(&format!("(?i){}", &p_search)).chain_err(|| UNABLE_TO_PARSE_REGEX)?;
-    let ep_num: usize = ep_num_string.parse::<usize>().unwrap();
-    let mut path: PathBuf = get_xml_dir()?;
-    if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
-        eprintln!(
-            "Couldn't create directory: {}\nReason: {}",
-            path.to_str().unwrap(),
-            err
-        );
-        return Ok(());
-    }
-    for subscription in &state.subscriptions {
-        if re_pod.is_match(&subscription.title) {
-            let mut filename: String = subscription.title.clone();
-            filename.push_str(".xml");
-            path.push(filename);
-
-            let mut file: File = File::open(&path).unwrap();
-            let mut content: Vec<u8> = Vec::new();
-            file.read_to_end(&mut content).unwrap();
-
-            let podcast = Podcast::from(Channel::read_from(content.as_slice()).unwrap());
-            let episodes = podcast.episodes();
-            let episode = episodes[episodes.len() - ep_num].clone();
-
-            filename = episode.title().unwrap();
-            filename.push_str(episode.extension().unwrap());
-            path = get_podcast_dir()?;
-            path.push(podcast.title());
-            path.push(filename);
-            if path.exists() {
-                launch_player(path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?)?;
-            } else {
-                launch_player(
-                    episode
-                        .url()
-                        .chain_err(|| "unable to retrieve episode url")?,
-                )?;
-            }
+    if let Ok(ep_num) = ep_num_string.parse::<usize>() {
+        let mut path: PathBuf = get_xml_dir()?;
+        if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
+            eprintln!(
+                "Couldn't create directory: {}\nReason: {}",
+                path.to_str().unwrap(),
+                err
+            );
             return Ok(());
         }
+        for subscription in &state.subscriptions {
+            if re_pod.is_match(&subscription.title) {
+                let mut filename: String = subscription.title.clone();
+                filename.push_str(".xml");
+                path.push(filename);
+
+                let mut file: File = File::open(&path).unwrap();
+                let mut content: Vec<u8> = Vec::new();
+                file.read_to_end(&mut content).unwrap();
+
+                let podcast = Podcast::from(Channel::read_from(content.as_slice()).unwrap());
+                let episodes = podcast.episodes();
+                let episode = episodes[episodes.len() - ep_num].clone();
+
+                filename = episode.title().unwrap();
+                filename.push_str(episode.extension().unwrap());
+                path = get_podcast_dir()?;
+                path.push(podcast.title());
+                path.push(filename);
+                if path.exists() {
+                    launch_player(path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?)?;
+                } else {
+                    launch_player(
+                        episode
+                            .url()
+                            .chain_err(|| "unable to retrieve episode url")?,
+                    )?;
+                }
+                return Ok(());
+            }
+        }
+    } else {
+        println!("Failed to parse episode number...");
+        println!("Attempting to find episode by name...");
+        play_episode_by_name(state, p_search, ep_num_string)
+            .chain_err(|| "Failed to play episode by name.")?;
     }
     Ok(())
 }
