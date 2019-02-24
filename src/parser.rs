@@ -1,6 +1,6 @@
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{App, Arg, SubCommand};
 
-pub fn get_matches<'a>(version: &str) -> ArgMatches<'a> {
+pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
     App::new("podcast")
         .version(version)
         .author("Nathan J. <njaremko@gmail.com>")
@@ -133,5 +133,4 @@ pub fn get_matches<'a>(version: &str) -> ArgMatches<'a> {
                         .index(1),
                 ),
         )
-        .get_matches()
 }

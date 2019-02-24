@@ -1,4 +1,7 @@
-use clap::ArgMatches;
+use clap::{App, ArgMatches};
+
+use std::env;
+use std::path::Path;
 
 use crate::actions::*;
 use crate::errors::*;
@@ -8,6 +11,7 @@ pub fn handle_matches(
     version: &str,
     state: &mut State,
     config: &Config,
+    app: &mut App,
     matches: &ArgMatches,
 ) -> Result<()> {
     match matches.subcommand_name() {
@@ -92,8 +96,16 @@ pub fn handle_matches(
                 .subcommand_matches("completion")
                 .chain_err(|| "unable to find subcommand matches")?;
             match matches.value_of("SHELL") {
-                Some(shell) => print_completion(shell),
-                None => print_completion(""),
+                Some(shell) => print_completion(app, shell),
+                None => {
+                    let shell_path_env = env::var("SHELL");
+                    if let Ok(p) = shell_path_env {
+                        let shell_path = Path::new(&p);
+                        if let Some(shell) = shell_path.file_name() {
+                            print_completion(app, shell.to_str().chain_err(|| format!("Unable to convert {:?} to string", shell))?)
+                        }
+                    }
+                }
             }
         }
         Some("refresh") => update_rss(state),

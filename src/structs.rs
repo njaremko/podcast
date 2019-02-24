@@ -103,9 +103,10 @@ impl State {
             };
             state.version = String::from(version);
             // Check if a day has passed (86400 seconds) since last launch
-            if 86400 < Utc::now()
-                .signed_duration_since(state.last_run_time)
-                .num_seconds()
+            if 86400
+                < Utc::now()
+                    .signed_duration_since(state.last_run_time)
+                    .num_seconds()
             {
                 update_rss(&mut state);
                 check_for_update(&state.version)?;

@@ -66,7 +66,7 @@ pub fn create_dir_if_not_exist(path: &PathBuf) -> Result<()> {
         .recursive(true)
         .create(&path)
         .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
-        Ok(())
+    Ok(())
 }
 
 pub fn create_directories() -> Result<()> {
@@ -76,16 +76,16 @@ pub fn create_directories() -> Result<()> {
 }
 
 pub fn delete(title: &str) -> Result<()> {
-        let mut path = get_xml_dir()?;
-        let mut filename = String::from(title);
-        filename.push_str(".xml");
-        path.push(filename);
-        fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
-    }
+    let mut path = get_xml_dir()?;
+    let mut filename = String::from(title);
+    filename.push_str(".xml");
+    path.push(filename);
+    fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
+}
 
-    pub fn delete_all() -> Result<()> {
-        fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
-    }
+pub fn delete_all() -> Result<()> {
+    fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
+}
 
 pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
     let mut result = HashSet::new();

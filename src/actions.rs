@@ -7,6 +7,8 @@ use std::io::{self, BufReader, Read, Write};
 use std::process::Command;
 
 use crate::errors::*;
+use clap::App;
+use clap::Shell;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest;
@@ -54,11 +56,10 @@ pub fn download_rss(config: &Config, url: &str) -> Result<()> {
     println!("Downloading episode(s)...");
     let channel = download_rss_feed(url)?;
     let mut download_limit = config.auto_download_limit as usize;
-    if 0 < download_limit  {
+    if 0 < download_limit {
         let podcast = Podcast::from(channel);
         let episodes = podcast.episodes();
-        if episodes.len() < download_limit
-        {
+        if episodes.len() < download_limit {
             download_limit = episodes.len()
         }
         episodes[..download_limit].par_iter().for_each(|ep| {
@@ -187,36 +188,32 @@ pub fn download(podcast_name: &str, episode: &Episode) -> Result<()> {
     create_dir_if_not_exist(&path)?;
 
     if let Some(url) = episode.url() {
-            if let Some(title) = episode.title() {
-                let mut filename = title;
-                filename.push_str(
-                    episode.extension()
-                        .chain_err(|| "unable to retrieve extension")?,
-                );
-                path.push(filename);
-                if !path.exists() {
-                    {
-                        let mut handle = stdout.lock();
-                        writeln!(&mut handle, "Downloading: {:?}", &path).ok();
-                    }
-                    let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
-                    let mut resp = reqwest::get(url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
-                    let mut content: Vec<u8> = Vec::new();
-                    resp.read_to_end(&mut content)
-                        .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
-                    file.write_all(&content)
-                        .chain_err(|| UNABLE_TO_WRITE_FILE)?;
-                } else {
+        if let Some(title) = episode.title() {
+            let mut filename = title;
+            filename.push_str(
+                episode
+                    .extension()
+                    .chain_err(|| "unable to retrieve extension")?,
+            );
+            path.push(filename);
+            if !path.exists() {
+                {
                     let mut handle = stdout.lock();
-                    writeln!(
-                        &mut handle,
-                        "File already exists: {:?}",
-                        &path
-                    )
-                    .ok();
+                    writeln!(&mut handle, "Downloading: {:?}", &path).ok();
                 }
+                let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+                let mut resp = reqwest::get(url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
+                let mut content: Vec<u8> = Vec::new();
+                resp.read_to_end(&mut content)
+                    .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
+                file.write_all(&content)
+                    .chain_err(|| UNABLE_TO_WRITE_FILE)?;
+            } else {
+                let mut handle = stdout.lock();
+                writeln!(&mut handle, "File already exists: {:?}", &path).ok();
             }
         }
+    }
     Ok(())
 }
 
@@ -256,8 +253,7 @@ pub fn download_episode_by_name(
                     .collect();
 
                 if let Some(ep) = filtered_episodes.first() {
-                    download(podcast.title(), ep)
-                        .chain_err(|| "unable to download episode")?;
+                    download(podcast.title(), ep).chain_err(|| "unable to download episode")?;
                 }
             }
         }
@@ -519,50 +515,13 @@ pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn print_completion(arg: &str) {
-    let zsh = r#"#compdef podcast
-#autoload
-
-# Copyright (C) 2019:
-#    Nathan Jaremko <njaremko@gmail.com>
-# All Rights Reserved.
-# This file is licensed under the GPLv2+. Please see COPYING for more information.
-
-_podcast() {
-    local ret=1
-    _arguments -C \
-        '1: :_podcast_cmds' \
-        && ret=0
-}
-
-_podcast_cmds () {
-    local subcommands;
-    subcommands=(
-    "download:Download episodes of podcast"
-    "help:Prints this message or the help of the given subcommand(s)"
-    "ls:List podcasts or episodes of a podcast"
-    "play:Play episodes of a podcast"
-    "refresh:Refreshes subscribed podcasts"
-    "rm:Unsubscribe from a podcast"
-    "completion:Shell Completions"
-    "search:Searches for podcasts"
-    "subscribe:Subscribe to a podcast RSS feed"
-    "update:check for updates"
-    )
-    _describe -t commands 'podcast' subcommands
-    _arguments : \
-        "--version[Output version information]" \
-        "--help[Output help message]"
-}
-
-_podcast"#;
-
-    //let bash = "";
-    //let sh = "";
+pub fn print_completion(app: &mut App, arg: &str) {
     match arg {
-        "zsh" => println!("{}", zsh),
-        //"bash" => println!("{}", bash),
-        //"sh" => println!("{}", sh),
-        _ => println!("Only options avaliable are: zsh"),
+        "zsh" => app.gen_completions_to("podcast", Shell::Zsh, &mut io::stdout()),
+        "bash" => app.gen_completions_to("podcast", Shell::Bash, &mut io::stdout()),
+        "powershell" => app.gen_completions_to("podcast", Shell::PowerShell, &mut io::stdout()),
+        "fish" => app.gen_completions_to("podcast", Shell::Fish, &mut io::stdout()),
+        "elvish" => app.gen_completions_to("podcast", Shell::Elvish, &mut io::stdout()),
+        other => eprintln!("Completions are not available for {}", other),
     }
 }

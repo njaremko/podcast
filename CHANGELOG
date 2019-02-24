@@ -1,3 +1,6 @@
+0.8.2
+- Add completion generation for all major shells
+
 0.8.1
 - Fix parser to actually see "sub" subcommand
 

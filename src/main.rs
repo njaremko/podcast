@@ -30,14 +30,15 @@ pub mod errors {
 use self::errors::*;
 use self::structs::*;
 
-const VERSION: &str = "0.8.1";
+const VERSION: &str = "0.8.2";
 
 fn main() -> Result<()> {
     utils::create_directories().chain_err(|| "unable to create directories")?;
     migration_handler::migrate_old_subscriptions()?;
     let mut state = State::new(VERSION).chain_err(|| "unable to load state")?;
     let config = Config::new()?;
-    let matches = parser::get_matches(&VERSION);
-    match_handler::handle_matches(&VERSION, &mut state, &config, &matches)?;
+    let mut app = parser::get_app(&VERSION);
+    let matches = app.clone().get_matches();
+    match_handler::handle_matches(&VERSION, &mut state, &config, &mut app, &matches)?;
     state.save().chain_err(|| "unable to save state")
 }
