@@ -3,16 +3,15 @@ use super::utils::*;
 use crate::errors::*;
 
 use std::collections::BTreeSet;
-use std::fs::{self, DirBuilder, File};
-use std::io::{self, BufReader, Read, Write};
+use std::fs::{self, File};
+use std::io::{self, BufReader, Write};
 
 use chrono::prelude::*;
 use rayon::prelude::*;
 use regex::Regex;
-use reqwest;
 use rss::{Channel, Item};
 use serde_json;
-use yaml_rust::YamlLoader;
+use std::path::PathBuf;
 
 #[cfg(target_os = "macos")]
 static ESCAPE_REGEX: &str = r"/";
@@ -25,6 +24,7 @@ lazy_static! {
     static ref FILENAME_ESCAPE: Regex = Regex::new(ESCAPE_REGEX).unwrap();
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
     pub auto_download_limit: i64,
 }
@@ -32,41 +32,47 @@ pub struct Config {
 impl Config {
     pub fn new() -> Result<Config> {
         let mut path = get_podcast_dir()?;
-        let mut download_limit = 1;
-        path.push(".config");
-        if path.exists() {
-            let mut s = String::new();
-            File::open(&path)
-                .chain_err(|| UNABLE_TO_OPEN_FILE)?
-                .read_to_string(&mut s)
-                .chain_err(|| UNABLE_TO_READ_FILE_TO_STRING)?;
-            let config =
-                YamlLoader::load_from_str(&s).chain_err(|| "unable to load yaml from string")?;
-            if !config.is_empty() {
-                let doc = &config[0];
-                if let Some(val) = doc["auto_download_limit"].as_i64() {
-                    download_limit = val;
+        path.push(".config.yaml");
+        let config = if path.exists() {
+            let file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
+            match serde_yaml::from_reader(file) {
+                Ok(config) => config,
+                Err(err) => {
+                    let mut new_path = path.clone();
+                    new_path.set_extension("yaml.bk");
+                    eprintln!("{}", err);
+                    eprintln!("Failed to open config file, moving to {:?}", &new_path);
+                    fs::rename(&path, new_path)
+                        .chain_err(|| "Failed to move old config file...")?;
+                    create_new_config_file(&path)?
                 }
             }
         } else {
-            let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
-            file.write_all(b"auto_download_limit: 1")
-                .chain_err(|| UNABLE_TO_WRITE_FILE)?;
-        }
-        Ok(Config {
-            auto_download_limit: download_limit,
-        })
+            create_new_config_file(&path)?
+        };
+        Ok(config)
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+fn create_new_config_file(path: &PathBuf) -> Result<Config> {
+    println!("Creating new config file at {:?}", &path);
+    let download_limit = 1;
+    let file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+    let config = Config {
+        auto_download_limit: download_limit,
+    };
+    serde_yaml::to_writer(file, &config).chain_err(|| UNABLE_TO_WRITE_FILE)?;
+    Ok(config)
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Subscription {
     pub title: String,
     pub url: String,
     pub num_episodes: usize,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct State {
     pub version: String,
     pub last_run_time: DateTime<Utc>,
@@ -75,21 +81,15 @@ pub struct State {
 
 impl State {
     pub fn new(version: &str) -> Result<State> {
-        let mut path = get_podcast_dir()?;
-        path.push(".subscriptions");
+        let path = get_sub_file()?;
         if path.exists() {
-            let mut s = String::new();
-            {
-                let mut file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
-                file.read_to_string(&mut s)
-                    .chain_err(|| UNABLE_TO_READ_FILE_TO_STRING)?;
-            }
-            let mut state: State = match serde_json::from_str(&s) {
+            let file = File::open(&path).chain_err(|| UNABLE_TO_OPEN_FILE)?;
+            let mut state: State = match serde_json::from_reader(&file) {
                 Ok(val) => val,
                 // This will happen if the struct has changed between versions
                 Err(_) => {
-                    let v: serde_json::Value =
-                        serde_json::from_str(&s).chain_err(|| "unable to read json from string")?;
+                    let v: serde_json::Value = serde_json::from_reader(&file)
+                        .chain_err(|| "unable to read json from string")?;
                     State {
                         version: String::from(version),
                         last_run_time: Utc::now(),
@@ -103,10 +103,9 @@ impl State {
             };
             state.version = String::from(version);
             // Check if a day has passed (86400 seconds) since last launch
-            if Utc::now()
+            if 86400 < Utc::now()
                 .signed_duration_since(state.last_run_time)
                 .num_seconds()
-                > 86400
             {
                 update_rss(&mut state);
                 check_for_update(&state.version)?;
@@ -115,6 +114,7 @@ impl State {
             state.save()?;
             Ok(state)
         } else {
+            println!("Creating new file {:?}", &path);
             Ok(State {
                 version: String::from(version),
                 last_run_time: Utc::now(),
@@ -126,7 +126,7 @@ impl State {
     pub fn subscribe(&mut self, url: &str) -> Result<()> {
         let mut set = BTreeSet::new();
         for sub in self.subscriptions() {
-            set.insert(sub.title);
+            set.insert(sub.title.clone());
         }
         let podcast = Podcast::from(Channel::from_url(url).unwrap());
         if !set.contains(podcast.title()) {
@@ -139,20 +139,26 @@ impl State {
         self.save()
     }
 
-    pub fn subscriptions(&self) -> Vec<Subscription> {
-        self.subscriptions.clone()
+    pub fn subscriptions(&self) -> &[Subscription] {
+        &self.subscriptions
+    }
+
+    pub fn subscriptions_mut(&mut self) -> &mut [Subscription] {
+        &mut self.subscriptions
     }
 
     pub fn save(&self) -> Result<()> {
-        let mut path = get_podcast_dir()?;
-        path.push(".subscriptions.tmp");
+        let mut path = get_sub_file()?;
+        path.set_extension("json.tmp");
         let serialized = serde_json::to_string(self).chain_err(|| "unable to serialize state")?;
         {
             let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
             file.write_all(serialized.as_bytes())
                 .chain_err(|| UNABLE_TO_WRITE_FILE)?;
         }
-        fs::rename(&path, get_sub_file()?).chain_err(|| "unable to rename file")?;
+        let sub_file_path = get_sub_file()?;
+        fs::rename(&path, &sub_file_path)
+            .chain_err(|| format!("unable to rename file {:?} to {:?}", &path, &sub_file_path))?;
         Ok(())
     }
 }
@@ -210,25 +216,26 @@ impl Podcast {
         let mut filename = String::from(title);
         filename.push_str(".xml");
         path.push(filename);
-
         fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
     }
 
     pub fn delete_all() -> Result<()> {
-        let path = get_xml_dir()?;
-        fs::remove_dir_all(path).chain_err(|| UNABLE_TO_READ_DIRECTORY)
+        fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
     }
 
     pub fn episodes(&self) -> Vec<Episode> {
         let mut result = Vec::new();
-        for item in self.0.items().to_vec() {
+        for item in self.0.items().to_owned() {
             result.push(Episode::from(item));
         }
         result
     }
 
     pub fn download(&self) -> Result<()> {
-        print!("You are about to download all episodes of {} (y/n): ", self.title());
+        print!(
+            "You are about to download all episodes of {} (y/n): ",
+            self.title()
+        );
         io::stdout().flush().ok();
         let mut input = String::new();
         io::stdin()
@@ -246,7 +253,7 @@ impl Podcast {
                 self.episodes().par_iter().for_each(|i| {
                     if let Some(ep_title) = i.title() {
                         if !downloaded.contains(&ep_title) {
-                            if let Err(err) = i.download(self.title()) {
+                            if let Err(err) = download(self.title(), i) {
                                 eprintln!("{}", err);
                             }
                         }
@@ -255,7 +262,7 @@ impl Podcast {
             }
             Err(_) => {
                 self.episodes().par_iter().for_each(|i| {
-                    if let Err(err) = i.download(self.title()) {
+                    if let Err(err) = download(self.title(), i) {
                         eprintln!("{}", err);
                     }
                 });
@@ -275,7 +282,7 @@ impl Podcast {
         episode_numbers.par_iter().for_each(|ep_num| {
             if let Some(ep_title) = episodes[episodes.len() - ep_num].title() {
                 if !downloaded.contains(&ep_title) {
-                    if let Err(err) = episodes[episodes.len() - ep_num].download(self.title()) {
+                    if let Err(err) = download(self.title(), &episodes[episodes.len() - ep_num]) {
                         eprintln!("{}", err);
                     }
                 }
@@ -308,44 +315,5 @@ impl Episode {
             "audio/ogg" => Some(".ogg"),
             _ => find_extension(self.url().unwrap()),
         }
-    }
-
-    pub fn download(&self, podcast_name: &str) -> Result<()> {
-        let stdout = io::stdout();
-
-        let mut path = get_podcast_dir()?;
-        path.push(podcast_name);
-        DirBuilder::new()
-            .recursive(true)
-            .create(&path)
-            .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
-
-        if let Some(url) = self.url() {
-            if let Some(title) = self.title() {
-                let mut filename = title;
-                filename.push_str(
-                    self.extension()
-                        .chain_err(|| "unable to retrieve extension")?,
-                );
-                path.push(filename);
-                if !path.exists() {
-                    {
-                        let mut handle = stdout.lock();
-                        writeln!(&mut handle, "Downloading: {}", path.to_str().unwrap()).ok();
-                    }
-                    let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
-                    let mut resp = reqwest::get(url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
-                    let mut content: Vec<u8> = Vec::new();
-                    resp.read_to_end(&mut content)
-                        .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
-                    file.write_all(&content)
-                        .chain_err(|| UNABLE_TO_WRITE_FILE)?;
-                } else {
-                    let mut handle = stdout.lock();
-                    writeln!(&mut handle, "File already exists: {}", path.to_str().chain_err(|| UNABLE_TO_CONVERT_TO_STR)?).ok();
-                }
-            }
-        }
-        Ok(())
     }
 }

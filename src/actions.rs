@@ -1,5 +1,5 @@
-use super::structs::*;
-use super::utils::*;
+use crate::structs::*;
+use crate::utils::*;
 
 use std::collections::HashSet;
 use std::fs::{self, DirBuilder, File};
@@ -16,12 +16,9 @@ use toml;
 
 pub fn list_episodes(search: &str) -> Result<()> {
     let re = Regex::new(&format!("(?i){}", &search)).chain_err(|| UNABLE_TO_PARSE_REGEX)?;
-    let mut path = get_podcast_dir()?;
-    path.push(".rss");
-    DirBuilder::new()
-        .recursive(true)
-        .create(&path)
-        .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
+    let path = get_xml_dir()?;
+    create_dir_if_not_exist(&path)?;
+
     for entry in fs::read_dir(&path).chain_err(|| UNABLE_TO_READ_DIRECTORY)? {
         let entry = entry.chain_err(|| UNABLE_TO_READ_ENTRY)?;
         if re.is_match(&entry.file_name().into_string().unwrap()) {
@@ -56,12 +53,16 @@ pub fn subscribe_rss(url: &str) -> Result<Channel> {
 pub fn download_rss(config: &Config, url: &str) -> Result<()> {
     println!("Downloading episode(s)...");
     let channel = download_rss_feed(url)?;
-    let download_limit = config.auto_download_limit as usize;
-    if download_limit > 0 {
+    let mut download_limit = config.auto_download_limit as usize;
+    if 0 < download_limit  {
         let podcast = Podcast::from(channel);
         let episodes = podcast.episodes();
+        if episodes.len() < download_limit
+        {
+            download_limit = episodes.len()
+        }
         episodes[..download_limit].par_iter().for_each(|ep| {
-            if let Err(err) = ep.download(podcast.title()) {
+            if let Err(err) = download(podcast.title(), ep) {
                 eprintln!("Error downloading {}: {}", podcast.title(), err);
             }
         });
@@ -72,10 +73,7 @@ pub fn download_rss(config: &Config, url: &str) -> Result<()> {
 pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
     let mut path: PathBuf = get_podcast_dir()?;
     path.push(&sub.title);
-    DirBuilder::new()
-        .recursive(true)
-        .create(&path)
-        .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
+    create_dir_if_not_exist(&path)?;
 
     let mut titles = HashSet::new();
     for entry in fs::read_dir(&path).chain_err(|| UNABLE_TO_READ_DIRECTORY)? {
@@ -93,20 +91,21 @@ pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
         Channel::read_from(BufReader::new(&content[..]))
             .chain_err(|| UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE)?,
     );
-    path = get_podcast_dir()?;
-    path.push(".rss");
 
     let mut filename = String::from(podcast.title());
     filename.push_str(".xml");
-    path.push(&filename);
-    let mut file = File::create(&path).unwrap();
+
+    let mut podcast_rss_path = get_xml_dir()?;
+    podcast_rss_path.push(&filename);
+
+    let mut file = File::create(&podcast_rss_path).unwrap();
     file.write_all(&content).unwrap();
 
-    if podcast.episodes().len() > sub.num_episodes {
+    if sub.num_episodes < podcast.episodes().len() {
         podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
             .par_iter()
             .for_each(|ep: &Episode| {
-                if let Err(err) = ep.download(podcast.title()) {
+                if let Err(err) = download(podcast.title(), ep) {
                     eprintln!("Error downloading {}: {}", podcast.title(), err);
                 }
             });
@@ -127,7 +126,7 @@ pub fn update_rss(state: &mut State) {
 pub fn list_subscriptions(state: &State) -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    for podcast in &state.subscriptions() {
+    for podcast in state.subscriptions() {
         writeln!(&mut handle, "{}", &podcast.title).ok();
     }
     Ok(())
@@ -159,8 +158,7 @@ pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) ->
                 let podcast = Podcast::from_title(&subscription.title)
                     .chain_err(|| UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE)?;
                 let episodes = podcast.episodes();
-                episodes[episodes.len() - ep_num]
-                    .download(podcast.title())
+                download(podcast.title(), &episodes[episodes.len() - ep_num])
                     .chain_err(|| "unable to download episode")?;
             }
         }
@@ -168,13 +166,57 @@ pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) ->
         {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            writeln!(&mut handle, "Failed to parse episode number...").ok();
-            writeln!(&mut handle, "Attempting to find episode by name...").ok();
+            writeln!(
+                &mut handle,
+                "Failed to parse episode number...\nAttempting to find episode by name..."
+            )
+            .ok();
         }
         download_episode_by_name(state, p_search, e_search, false)
             .chain_err(|| "Failed to download episode.")?;
     }
 
+    Ok(())
+}
+
+pub fn download(podcast_name: &str, episode: &Episode) -> Result<()> {
+    let stdout = io::stdout();
+
+    let mut path = get_podcast_dir()?;
+    path.push(podcast_name);
+    create_dir_if_not_exist(&path)?;
+
+    if let Some(url) = episode.url() {
+            if let Some(title) = episode.title() {
+                let mut filename = title;
+                filename.push_str(
+                    episode.extension()
+                        .chain_err(|| "unable to retrieve extension")?,
+                );
+                path.push(filename);
+                if !path.exists() {
+                    {
+                        let mut handle = stdout.lock();
+                        writeln!(&mut handle, "Downloading: {:?}", &path).ok();
+                    }
+                    let mut file = File::create(&path).chain_err(|| UNABLE_TO_CREATE_FILE)?;
+                    let mut resp = reqwest::get(url).chain_err(|| UNABLE_TO_GET_HTTP_RESPONSE)?;
+                    let mut content: Vec<u8> = Vec::new();
+                    resp.read_to_end(&mut content)
+                        .chain_err(|| UNABLE_TO_READ_RESPONSE_TO_END)?;
+                    file.write_all(&content)
+                        .chain_err(|| UNABLE_TO_WRITE_FILE)?;
+                } else {
+                    let mut handle = stdout.lock();
+                    writeln!(
+                        &mut handle,
+                        "File already exists: {:?}",
+                        &path
+                    )
+                    .ok();
+                }
+            }
+        }
     Ok(())
 }
 
@@ -194,29 +236,27 @@ pub fn download_episode_by_name(
             if download_all {
                 episodes
                     .iter()
-                    .filter(|ep| {
-                        ep.title()
-                            .unwrap_or_else(|| "".to_string())
-                            .contains(e_search)
-                    })
+                    .filter(|ep| ep.title().is_some())
+                    .filter(|ep| ep.title().unwrap().contains(e_search))
                     .for_each(|ep| {
-                        ep.download(podcast.title()).unwrap_or_else(|_| {
+                        download(podcast.title(), ep).unwrap_or_else(|_| {
                             eprintln!("Error downloading episode: {}", podcast.title())
                         });
                     })
             } else {
                 let filtered_episodes: Vec<&Episode> = episodes
                     .iter()
+                    .filter(|ep| ep.title().is_some())
                     .filter(|ep| {
                         ep.title()
-                            .unwrap_or_else(|| "".to_string())
+                            .unwrap()
                             .to_lowercase()
                             .contains(&e_search.to_lowercase())
                     })
                     .collect();
 
                 if let Some(ep) = filtered_episodes.first() {
-                    ep.download(podcast.title())
+                    download(podcast.title(), ep)
                         .chain_err(|| "unable to download episode")?;
                 }
             }
@@ -343,7 +383,7 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
         {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            writeln!(&mut handle, "Failed to parse episode number...").ok();
+            writeln!(&mut handle, "Failed to parse episode index number...").ok();
             writeln!(&mut handle, "Attempting to find episode by name...").ok();
         }
         play_episode_by_name(state, p_search, ep_num_string)
@@ -415,7 +455,6 @@ pub fn check_for_update(version: &str) -> Result<()> {
             .text()
             .chain_err(|| "unable to convert response to text")?;
 
-    //println!("{}", resp);
     let config = resp
         .parse::<toml::Value>()
         .chain_err(|| "unable to parse toml")?;
@@ -464,7 +503,8 @@ fn launch_vlc(url: &str) -> Result<()> {
 
 pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
     if p_search == "*" {
-        return Podcast::delete_all();
+        state.subscriptions = vec![];
+        return delete_all();
     }
 
     let re_pod = Regex::new(&format!("(?i){}", &p_search)).chain_err(|| UNABLE_TO_PARSE_REGEX)?;
@@ -473,7 +513,7 @@ pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
         let title = state.subscriptions[subscription].title.clone();
         if re_pod.is_match(&title) {
             state.subscriptions.remove(subscription);
-            Podcast::delete(&title)?;
+            delete(&title)?;
         }
     }
     Ok(())
@@ -483,7 +523,7 @@ pub fn print_completion(arg: &str) {
     let zsh = r#"#compdef podcast
 #autoload
 
-# Copyright (C) 2017:
+# Copyright (C) 2019:
 #    Nathan Jaremko <njaremko@gmail.com>
 # All Rights Reserved.
 # This file is licensed under the GPLv2+. Please see COPYING for more information.

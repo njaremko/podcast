@@ -12,6 +12,7 @@ use rss::Channel;
 pub const UNABLE_TO_PARSE_REGEX: &str = "unable to parse regex";
 pub const UNABLE_TO_OPEN_FILE: &str = "unable to open file";
 pub const UNABLE_TO_CREATE_FILE: &str = "unable to create file";
+pub const UNABLE_TO_READ_FILE: &str = "unable to read file";
 pub const UNABLE_TO_WRITE_FILE: &str = "unable to write file";
 pub const UNABLE_TO_READ_FILE_TO_STRING: &str = "unable to read file to string";
 pub const UNABLE_TO_READ_DIRECTORY: &str = "unable to read directory";
@@ -25,6 +26,7 @@ pub const UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE: &str =
     "unable to create channel from http response";
 pub const UNABLE_TO_CREATE_CHANNEL_FROM_FILE: &str = "unable to create channel from xml file";
 pub const UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE: &str = "unable to retrieve podcast by title";
+
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
     let index = name.rfind('.')?;
@@ -59,14 +61,31 @@ pub fn get_podcast_dir() -> Result<PathBuf> {
     }
 }
 
-pub fn create_directories() -> Result<()> {
-    let mut path = get_podcast_dir()?;
-    path.push(".rss");
+pub fn create_dir_if_not_exist(path: &PathBuf) -> Result<()> {
     DirBuilder::new()
         .recursive(true)
         .create(&path)
-        .chain_err(|| "unable to create directory")
+        .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
+        Ok(())
 }
+
+pub fn create_directories() -> Result<()> {
+    let mut path = get_podcast_dir()?;
+    path.push(".rss");
+    create_dir_if_not_exist(&path)
+}
+
+pub fn delete(title: &str) -> Result<()> {
+        let mut path = get_xml_dir()?;
+        let mut filename = String::from(title);
+        filename.push_str(".xml");
+        path.push(filename);
+        fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
+    }
+
+    pub fn delete_all() -> Result<()> {
+        fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
+    }
 
 pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
     let mut result = HashSet::new();
@@ -95,7 +114,7 @@ pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
 
 pub fn get_sub_file() -> Result<PathBuf> {
     let mut path = get_podcast_dir()?;
-    path.push(".subscriptions");
+    path.push(".subscriptions.json");
     Ok(path)
 }
 
@@ -108,10 +127,7 @@ pub fn get_xml_dir() -> Result<PathBuf> {
 pub fn download_rss_feed(url: &str) -> Result<Channel> {
     let mut path = get_podcast_dir()?;
     path.push(".rss");
-    DirBuilder::new()
-        .recursive(true)
-        .create(&path)
-        .chain_err(|| "unable to open directory")?;
+    create_dir_if_not_exist(&path)?;
     let mut resp = reqwest::get(url).chain_err(|| "unable to open url")?;
     let mut content: Vec<u8> = Vec::new();
     resp.read_to_end(&mut content)
