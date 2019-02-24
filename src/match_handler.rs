@@ -66,7 +66,8 @@ pub fn handle_matches(
         }
         Some("sub") | Some("subscribe") => {
             let subscribe_matches = matches
-                .subcommand_matches("subscribe")
+                .subcommand_matches("sub")
+                .or_else(|| matches.subcommand_matches("subscribe"))
                 .chain_err(|| "unable to find subcommand matches")?;
             let url = subscribe_matches
                 .value_of("URL")

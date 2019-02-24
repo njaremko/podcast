@@ -211,18 +211,6 @@ impl Podcast {
         ))
     }
 
-    pub fn delete(title: &str) -> Result<()> {
-        let mut path = get_xml_dir()?;
-        let mut filename = String::from(title);
-        filename.push_str(".xml");
-        path.push(filename);
-        fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
-    }
-
-    pub fn delete_all() -> Result<()> {
-        fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
-    }
-
     pub fn episodes(&self) -> Vec<Episode> {
         let mut result = Vec::new();
         for item in self.0.items().to_owned() {
