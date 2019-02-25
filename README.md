@@ -37,7 +37,7 @@ All: `podcast download $podcast_name`
 You can also use a portion of the name. 
 Podcast will pick the first podcast alphabetically that contains the given word (Case-Insensitive).
 
-Example Usage:
+# Example Usage:
 ```sh
 $ podcast subscribe "http://feeds.feedburner.com/mbmbam"
 $ podcast ls
@@ -59,4 +59,15 @@ Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 344: T
 Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 244: Slimefoot.mp3
 Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 144: Kick it Forward.mp3
 Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/My Brother, My Brother and Me 44: Chunk Pump.mp3
+```
+
+# Generating completions:
+```sh
+# Generating completion for current shell:
+$ podcast completion
+... outputs stuff that needs to be loaded by your shell on startup ...
+
+# Fish Shell Example
+$ podcast completion fish > podcast.fish
+$ sudo mv podcast.fish /usr/share/fish/completions
 ```
