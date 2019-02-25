@@ -93,12 +93,6 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                         .help("URL to RSS feed")
                         .required(true)
                         .index(1),
-                )
-                .arg(
-                    Arg::with_name("download")
-                        .short("d")
-                        .long("download")
-                        .help("auto download based on config"),
                 ),
         )
         .subcommand(
@@ -109,12 +103,6 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                         .help("URL to RSS feed")
                         .required(true)
                         .index(1),
-                )
-                .arg(
-                    Arg::with_name("download")
-                        .short("d")
-                        .long("download")
-                        .help("auto download based on config"),
                 ),
         )
         .subcommand(SubCommand::with_name("refresh").about("refresh subscribed podcasts"))

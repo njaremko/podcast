@@ -47,16 +47,11 @@ pub fn list_episodes(search: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn subscribe_rss(url: &str) -> Result<Channel> {
-    println!("Downloading RSS feed...");
-    download_rss_feed(url)
-}
-
 pub fn download_rss(config: &Config, url: &str) -> Result<()> {
-    println!("Downloading episode(s)...");
     let channel = download_rss_feed(url)?;
     let mut download_limit = config.auto_download_limit as usize;
     if 0 < download_limit {
+        println!("Downloading episode(s)...");
         let podcast = Podcast::from(channel);
         let episodes = podcast.episodes();
         if episodes.len() < download_limit {

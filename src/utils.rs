@@ -125,6 +125,7 @@ pub fn get_xml_dir() -> Result<PathBuf> {
 }
 
 pub fn download_rss_feed(url: &str) -> Result<Channel> {
+    println!("Downloading RSS feed...");
     let mut path = get_podcast_dir()?;
     path.push(".rss");
     create_dir_if_not_exist(&path)?;

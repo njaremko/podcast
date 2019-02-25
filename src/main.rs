@@ -30,7 +30,7 @@ pub mod errors {
 use self::errors::*;
 use self::structs::*;
 
-const VERSION: &str = "0.8.2";
+const VERSION: &str = "0.9.0";
 
 fn main() -> Result<()> {
     utils::create_directories().chain_err(|| "unable to create directories")?;

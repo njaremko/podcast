@@ -77,11 +77,7 @@ pub fn handle_matches(
                 .value_of("URL")
                 .chain_err(|| "unable to find subcommand match")?;
             state.subscribe(url).chain_err(|| "unable to subscribe")?;
-            if subscribe_matches.occurrences_of("download") > 0 {
-                download_rss(&config, url)?;
-            } else {
-                subscribe_rss(url)?;
-            }
+            download_rss(&config, url)?;
         }
         Some("search") => println!("This feature is coming soon..."),
         Some("rm") => {
