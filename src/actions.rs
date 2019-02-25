@@ -51,6 +51,7 @@ pub fn download_rss(config: &Config, url: &str) -> Result<()> {
     let channel = download_rss_feed(url)?;
     let mut download_limit = config.auto_download_limit as usize;
     if 0 < download_limit {
+        println!("Subscribe auto-download limit set to: {}", download_limit);
         println!("Downloading episode(s)...");
         let podcast = Podcast::from(channel);
         let episodes = podcast.episodes();

@@ -27,6 +27,8 @@ pub const UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE: &str =
 pub const UNABLE_TO_CREATE_CHANNEL_FROM_FILE: &str = "unable to create channel from xml file";
 pub const UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE: &str = "unable to retrieve podcast by title";
 
+const UNSUBSCRIBE_NOTE: &str = "Note: this does NOT delete any downloaded podcasts";
+
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
     let index = name.rfind('.')?;
@@ -80,10 +82,15 @@ pub fn delete(title: &str) -> Result<()> {
     let mut filename = String::from(title);
     filename.push_str(".xml");
     path.push(filename);
+    println!("Removing '{}' from subscriptions...", &title);
+    println!("{}", UNSUBSCRIBE_NOTE);
     fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
 }
 
+
 pub fn delete_all() -> Result<()> {
+    println!("Removing all subscriptions...");
+    println!("{}", UNSUBSCRIBE_NOTE);
     fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
 }
 

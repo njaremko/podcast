@@ -1,3 +1,6 @@
+0.9.1
+- Improve unsubscribe messages
+
 0.9.0
 - Removed `-d` from sub and subscribe subcommands. Behaviour of subscribing is defined by the .config.yaml file now.
 
