@@ -73,3 +73,11 @@ $ podcast completion
 $ podcast completion fish > podcast.fish
 $ sudo mv podcast.fish /usr/share/fish/completions
 ```
+
+# Building
+Building requires nightly rust
+```sh
+git clone git@github.com:njaremko/podcast.git
+cd podcast
+cargo install --path=.
+```
