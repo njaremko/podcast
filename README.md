@@ -16,10 +16,12 @@
 - [x] Playing podcasts
 - [x] Auto-download new episodes
 - [x] Automatically check for updates
-- [ ] Shell Completions
+- [x] Shell Completions
     - [x] zsh
-    - [ ] bash
-    - [ ] sh
+    - [x] bash
+    - [x] fish
+    - [x] powershell
+    - [x] elvish
 - [ ] Searching for podcasts...(WIP)
 
 By default, podcasts are downloaded to `$HOME/Podcasts`, but this folder can be set with the `$PODCAST` environmental variable.
