@@ -38,7 +38,7 @@ mod errors {
 use self::structs::*;
 use errors::Result;
 
-const VERSION: &str = "0.10.1";
+const VERSION: &str = "0.10.2";
 
 fn main() -> Result<()> {
     utils::create_directories()?;
