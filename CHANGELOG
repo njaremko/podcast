@@ -1,3 +1,8 @@
+0.10.0
+- Partial re-write of the application to be idiomatic
+- Improves performance throughout the application (downloads are also faster)
+- Changed from error-chain to failure for error handling
+
 0.9.1
 - Improve unsubscribe messages
 

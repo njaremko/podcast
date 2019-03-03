@@ -1,31 +1,13 @@
 use std::collections::HashSet;
 use std::env;
 use std::fs::{self, DirBuilder, File};
-use std::io::{BufReader, Read, Write};
+use std::io::{self, BufReader, Read, Write};
 use std::path::PathBuf;
 
 use crate::errors::*;
 use dirs;
 use reqwest;
 use rss::Channel;
-
-pub const UNABLE_TO_PARSE_REGEX: &str = "unable to parse regex";
-pub const UNABLE_TO_OPEN_FILE: &str = "unable to open file";
-pub const UNABLE_TO_CREATE_FILE: &str = "unable to create file";
-pub const UNABLE_TO_READ_FILE: &str = "unable to read file";
-pub const UNABLE_TO_WRITE_FILE: &str = "unable to write file";
-pub const UNABLE_TO_READ_FILE_TO_STRING: &str = "unable to read file to string";
-pub const UNABLE_TO_READ_DIRECTORY: &str = "unable to read directory";
-pub const UNABLE_TO_READ_ENTRY: &str = "unable to read entry";
-pub const UNABLE_TO_CREATE_DIRECTORY: &str = "unable to create directory";
-pub const UNABLE_TO_READ_RESPONSE_TO_END: &str = "unable to read response to end";
-pub const UNABLE_TO_GET_HTTP_RESPONSE: &str = "unable to get http response";
-pub const UNABLE_TO_CONVERT_TO_STR: &str = "unable to convert to &str";
-pub const UNABLE_TO_REMOVE_FILE: &str = "unable to remove file";
-pub const UNABLE_TO_CREATE_CHANNEL_FROM_RESPONSE: &str =
-    "unable to create channel from http response";
-pub const UNABLE_TO_CREATE_CHANNEL_FROM_FILE: &str = "unable to create channel from xml file";
-pub const UNABLE_TO_RETRIEVE_PODCAST_BY_TITLE: &str = "unable to retrieve podcast by title";
 
 const UNSUBSCRIBE_NOTE: &str = "Note: this does NOT delete any downloaded podcasts";
 
@@ -35,28 +17,19 @@ pub fn trim_extension(filename: &str) -> Option<String> {
     Some(String::from(&name[0..index]))
 }
 
-pub fn find_extension(input: &str) -> Option<&str> {
-    let tmp = String::from(input);
-    if tmp.ends_with(".mp3") {
-        Some(".mp3")
-    } else if tmp.ends_with(".m4a") {
-        Some(".m4a")
-    } else if tmp.ends_with(".wav") {
-        Some(".wav")
-    } else if tmp.ends_with(".ogg") {
-        Some(".ogg")
-    } else if tmp.ends_with(".opus") {
-        Some(".opus")
-    } else {
-        None
+pub fn find_extension(input: &str) -> Option<String> {
+    let s: Vec<String> = input.split(".").map(|s| s.to_string()).collect();
+    if s.len() > 1 {
+        return s.last().cloned();
     }
+    None
 }
 
 pub fn get_podcast_dir() -> Result<PathBuf> {
     match env::var_os("PODCAST") {
         Some(val) => Ok(PathBuf::from(val)),
         None => {
-            let mut path = dirs::home_dir().chain_err(|| "Couldn't find your home directory")?;
+            let mut path = dirs::home_dir().unwrap();
             path.push("Podcasts");
             Ok(path)
         }
@@ -64,15 +37,13 @@ pub fn get_podcast_dir() -> Result<PathBuf> {
 }
 
 pub fn create_dir_if_not_exist(path: &PathBuf) -> Result<()> {
-    DirBuilder::new()
-        .recursive(true)
-        .create(&path)
-        .chain_err(|| UNABLE_TO_CREATE_DIRECTORY)?;
+    DirBuilder::new().recursive(true).create(&path)?;
     Ok(())
 }
 
 pub fn create_directories() -> Result<()> {
     let mut path = get_podcast_dir()?;
+    writeln!(io::stdout().lock(), "Using PODCAST dir: {:?}", &path).ok();
     path.push(".rss");
     create_dir_if_not_exist(&path)
 }
@@ -84,14 +55,15 @@ pub fn delete(title: &str) -> Result<()> {
     path.push(filename);
     println!("Removing '{}' from subscriptions...", &title);
     println!("{}", UNSUBSCRIBE_NOTE);
-    fs::remove_file(path).chain_err(|| UNABLE_TO_REMOVE_FILE)
+    fs::remove_file(path)?;
+    Ok(())
 }
-
 
 pub fn delete_all() -> Result<()> {
     println!("Removing all subscriptions...");
     println!("{}", UNSUBSCRIBE_NOTE);
-    fs::remove_dir_all(get_xml_dir()?).chain_err(|| UNABLE_TO_READ_DIRECTORY)
+    fs::remove_dir_all(get_xml_dir()?)?;
+    Ok(())
 }
 
 pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
@@ -100,12 +72,12 @@ pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
     let mut path = get_podcast_dir()?;
     path.push(dir);
 
-    let entries = fs::read_dir(path).chain_err(|| "unable to read directory")?;
+    let entries = fs::read_dir(path)?;
     for entry in entries {
-        let entry = entry.chain_err(|| "unable to read entry")?;
+        let entry = entry?;
         match entry.file_name().into_string() {
             Ok(name) => {
-                let index = name.find('.').chain_err(|| "unable to find string index")?;
+                let index = name.find('.').unwrap();
                 result.insert(String::from(&name[0..index]));
             }
             Err(_) => {
@@ -136,51 +108,16 @@ pub fn download_rss_feed(url: &str) -> Result<Channel> {
     let mut path = get_podcast_dir()?;
     path.push(".rss");
     create_dir_if_not_exist(&path)?;
-    let mut resp = reqwest::get(url).chain_err(|| "unable to open url")?;
+    let mut resp = reqwest::get(url)?;
     let mut content: Vec<u8> = Vec::new();
-    resp.read_to_end(&mut content)
-        .chain_err(|| "unable to read http response to end")?;
-    let channel = Channel::read_from(BufReader::new(&content[..]))
-        .chain_err(|| "unable to create channel from xml http response")?;
+    resp.read_to_end(&mut content)?;
+    let channel = Channel::read_from(BufReader::new(&content[..]))?;
     let mut filename = String::from(channel.title());
     filename.push_str(".xml");
     path.push(filename);
-    let mut file = File::create(&path).chain_err(|| "unable to create file")?;
-    file.write_all(&content)
-        .chain_err(|| "unable to write file")?;
+    let mut file = File::create(&path)?;
+    file.write_all(&content)?;
     Ok(channel)
-}
-
-pub fn parse_download_episodes(e_search: &str) -> Result<Vec<usize>> {
-    let input = String::from(e_search);
-    let mut ranges = Vec::<(usize, usize)>::new();
-    let mut elements = Vec::<usize>::new();
-    let comma_separated: Vec<&str> = input.split(',').collect();
-    for elem in comma_separated {
-        let temp = String::from(elem);
-        if temp.contains('-') {
-            let range: Vec<usize> = elem
-                .split('-')
-                .map(|i| i.parse::<usize>().chain_err(|| "unable to parse number"))
-                .collect::<Result<Vec<usize>>>()
-                .chain_err(|| "unable to collect ranges")?;
-            ranges.push((range[0], range[1]));
-        } else {
-            elements.push(
-                elem.parse::<usize>()
-                    .chain_err(|| "unable to parse number")?,
-            );
-        }
-    }
-
-    for range in ranges {
-        // Add 1 to upper range to include given episode in the download
-        for num in range.0..=range.1 {
-            elements.push(num);
-        }
-    }
-    elements.dedup();
-    Ok(elements)
 }
 
 #[cfg(test)]
@@ -189,32 +126,37 @@ mod tests {
 
     #[test]
     fn test_find_extension_mp3() {
-        assert_eq!(find_extension("test.mp3"), Some(".mp3"))
+        assert_eq!(find_extension("test.mp3"), Some("mp3".into()))
     }
 
     #[test]
     fn test_find_extension_m4a() {
-        assert_eq!(find_extension("test.m4a"), Some(".m4a"))
+        assert_eq!(find_extension("test.m4a"), Some("m4a".into()))
     }
 
     #[test]
     fn test_find_extension_wav() {
-        assert_eq!(find_extension("test.wav"), Some(".wav"))
+        assert_eq!(find_extension("test.wav"), Some("wav".into()))
     }
 
     #[test]
     fn test_find_extension_ogg() {
-        assert_eq!(find_extension("test.ogg"), Some(".ogg"))
+        assert_eq!(find_extension("test.ogg"), Some("ogg".into()))
     }
 
     #[test]
     fn test_find_extension_opus() {
-        assert_eq!(find_extension("test.opus"), Some(".opus"))
+        assert_eq!(find_extension("test.opus"), Some("opus".into()))
     }
 
     #[test]
-    fn test_find_extension_invalid() {
-        assert_eq!(find_extension("test.taco"), None)
+    fn test_find_weird_extension() {
+        assert_eq!(find_extension("test.taco"), Some("taco".into()))
+    }
+
+    #[test]
+    fn test_find_no_extension() {
+        assert_eq!(find_extension("test"), None)
     }
 
     #[test]
