@@ -76,8 +76,7 @@ pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
     (*podcast).write_to(BufWriter::new(file))?;
 
     if sub.num_episodes < podcast.episodes().len() {
-        podcast.episodes()
-            [..podcast.episodes().len() - sub.num_episodes]
+        podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
             .par_iter()
             .map(|ep| download::download(podcast.title(), ep))
             .flat_map(|e| e.err())
@@ -113,7 +112,9 @@ pub fn check_for_update(version: &str) -> Result<()> {
             .text()?;
 
     let config = resp.parse::<toml::Value>()?;
-    let latest = config["package"]["version"].as_str().expect(&format!("Cargo.toml didn't have a version {:?}", config));
+    let latest = config["package"]["version"]
+        .as_str()
+        .expect(&format!("Cargo.toml didn't have a version {:?}", config));
     if version != latest {
         println!("New version available: {} -> {}", version, latest);
     }
