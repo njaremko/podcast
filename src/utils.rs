@@ -13,8 +13,11 @@ const UNSUBSCRIBE_NOTE: &str = "Note: this does NOT delete any downloaded podcas
 
 pub fn trim_extension(filename: &str) -> Option<String> {
     let name = String::from(filename);
-    let index = name.rfind('.')?;
-    Some(String::from(&name[0..index]))
+    if name.contains(".") {
+        name.rfind('.').map(|index| String::from(&name[0..index]))
+    } else {
+        Some(name)
+    }
 }
 
 pub fn find_extension(input: &str) -> Option<String> {
@@ -166,6 +169,6 @@ mod tests {
 
     #[test]
     fn test_trim_extension_invalid() {
-        assert_eq!(trim_extension("test"), None)
+        assert_eq!(trim_extension("test"), Some("test".into()))
     }
 }

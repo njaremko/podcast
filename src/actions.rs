@@ -66,11 +66,9 @@ pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
     let resp = reqwest::get(&sub.url)?;
     let podcast = Podcast::from(Channel::read_from(BufReader::new(resp))?);
 
-    let mut filename = String::from(podcast.title());
-    filename.push_str(".xml");
-
     let mut podcast_rss_path = get_xml_dir()?;
-    podcast_rss_path.push(&filename);
+    podcast_rss_path.push(podcast.title());
+    podcast_rss_path.set_extension("xml");
 
     let file = File::create(&podcast_rss_path)?;
     (*podcast).write_to(BufWriter::new(file))?;
