@@ -4,6 +4,7 @@ use crate::utils::*;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
+use failure::Fail;
 
 use failure::Error;
 use rayon::prelude::*;
@@ -16,18 +17,15 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) -> Result<(
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
-            let downloaded = already_downloaded(podcast.title())?;
             let episodes = podcast.episodes();
             let episodes_to_download = parse_download_episodes(e_search)?;
 
             episodes_to_download
                 .par_iter()
                 .map(|ep_num| &episodes[episodes.len() - ep_num])
-                .filter(|e| e.title().is_some())
-                .filter(|e| !downloaded.contains(&e.title().unwrap()))
                 .map(|ep| download(podcast.title(), ep))
                 .flat_map(|e| e.err())
-                .for_each(|err| eprintln!("Error: {}", err));
+                .for_each(|err| println!("Error: {}", err));
         }
     }
     Ok(())
@@ -52,6 +50,14 @@ pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) ->
     Ok(())
 }
 
+#[derive(Debug, Fail)]
+enum DownloadError {
+    #[fail(display = "File already exists: {}", path)]
+    AlreadyExists {
+        path: String,
+    }
+}
+
 pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
     let mut path = get_podcast_dir()?;
     path.push(podcast_name);
@@ -68,7 +74,7 @@ pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
             let mut writer = BufWriter::new(file);
             io::copy(&mut reader, &mut writer)?;
         } else {
-            eprintln!("File already exists: {:?}", &path);
+            return Err(DownloadError::AlreadyExists{path: path.to_str().unwrap().to_string()}.into());
         }
     }
     Ok(())
