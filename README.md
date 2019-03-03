@@ -2,9 +2,9 @@
  ---
  `podcast` is a command line podcast player.
  
- [Linux x64 binary download](https://github.com/njaremko/podcast/releases/download/0.10.1/podcast-x86_64-linux)
+ [Linux x64 binary download](https://github.com/njaremko/podcast/releases/download/0.10.2/podcast-x86_64-linux)
  
- SHA256 Checksum: 877865f977388db3908c3fbe37f7cca8ecabc9c473731413f907e4b1d93d4c60
+ SHA256 Checksum: a42a4be68ce3e0fb35821a9f1541c18bc92f7be614e6c4b84f750395e38e47d0
  
  NOTE: Playback requires either mpv or vlc to be installed
  
