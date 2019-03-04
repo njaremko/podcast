@@ -138,21 +138,22 @@ pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
 }
 
 pub fn print_completion(app: &mut App, arg: &str) {
+    let command_name = "podcast";
     match arg {
         "zsh" => {
-            app.gen_completions_to("podcast", Shell::Zsh, &mut io::stdout());
+            app.gen_completions_to(command_name, Shell::Zsh, &mut io::stdout());
         }
         "bash" => {
-            app.gen_completions_to("podcast", Shell::Bash, &mut io::stdout());
+            app.gen_completions_to(command_name, Shell::Bash, &mut io::stdout());
         }
         "powershell" => {
-            app.gen_completions_to("podcast", Shell::PowerShell, &mut io::stdout());
+            app.gen_completions_to(command_name, Shell::PowerShell, &mut io::stdout());
         }
         "fish" => {
-            app.gen_completions_to("podcast", Shell::Fish, &mut io::stdout());
+            app.gen_completions_to(command_name, Shell::Fish, &mut io::stdout());
         }
         "elvish" => {
-            app.gen_completions_to("podcast", Shell::Elvish, &mut io::stdout());
+            app.gen_completions_to(command_name, Shell::Elvish, &mut io::stdout());
         }
         other => {
             println!("Completions are not available for {}", other);

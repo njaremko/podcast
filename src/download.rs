@@ -63,9 +63,14 @@ pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
     path.push(podcast_name);
     create_dir_if_not_exist(&path)?;
 
-    if let (Some(title), Some(url)) = (episode.title(), episode.url()) {
+    if let (Some(mut title), Some(url)) = (episode.title(), episode.url()) {
+        episode.extension().map(|ext|  {
+            if !title.ends_with(".") {
+                title.push_str(".");
+            }
+            title.push_str(&ext);
+        });   
         path.push(title);
-        episode.extension().map(|ext| path.set_extension(ext));
         if !path.exists() {
             println!("Downloading: {:?}", &path);
             let resp = reqwest::get(url)?;
