@@ -1,7 +1,7 @@
 use crate::download;
 use crate::errors::*;
 use crate::structs::*;
-use crate::utils::*;
+use crate::utils;
 
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -18,8 +18,8 @@ use toml;
 
 pub fn list_episodes(search: &str) -> Result<()> {
     let re = Regex::new(&format!("(?i){}", &search))?;
-    let path = get_xml_dir()?;
-    create_dir_if_not_exist(&path)?;
+    let path = utils::get_xml_dir()?;
+    utils::create_dir_if_not_exist(&path)?;
 
     for entry in fs::read_dir(&path)? {
         let entry = entry?;
@@ -51,14 +51,14 @@ pub fn list_episodes(search: &str) -> Result<()> {
 
 pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
     println!("Updating {}", sub.title);
-    let mut path: PathBuf = get_podcast_dir()?;
+    let mut path: PathBuf = utils::get_podcast_dir()?;
     path.push(&sub.title);
-    create_dir_if_not_exist(&path)?;
+    utils::create_dir_if_not_exist(&path)?;
 
     let mut titles = HashSet::new();
     for entry in fs::read_dir(&path)? {
         let unwrapped_entry = &entry?;
-        titles.insert(trim_extension(
+        titles.insert(utils::trim_extension(
             &unwrapped_entry.file_name().into_string().unwrap(),
         ));
     }
@@ -66,9 +66,9 @@ pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
     let resp = reqwest::get(&sub.url)?;
     let podcast = Podcast::from(Channel::read_from(BufReader::new(resp))?);
 
-    let mut podcast_rss_path = get_xml_dir()?;
-    podcast_rss_path.push(podcast.title());
-    podcast_rss_path.set_extension("xml");
+    let mut podcast_rss_path = utils::get_xml_dir()?;
+    let title = utils::append_extension(podcast.title(), "xml");
+    podcast_rss_path.push(title);
 
     let file = File::create(&podcast_rss_path)?;
     (*podcast).write_to(BufWriter::new(file))?;
@@ -112,7 +112,7 @@ pub fn check_for_update(version: &str) -> Result<()> {
     let config = resp.parse::<toml::Value>()?;
     let latest = config["package"]["version"]
         .as_str()
-        .expect(&format!("Cargo.toml didn't have a version {:?}", config));
+        .unwrap_or_else(|| panic!("Cargo.toml didn't have a version {:?}", config));
     if version != latest {
         println!("New version available: {} -> {}", version, latest);
     }
@@ -122,7 +122,7 @@ pub fn check_for_update(version: &str) -> Result<()> {
 pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
     if p_search == "*" {
         state.subscriptions = vec![];
-        return delete_all();
+        return utils::delete_all();
     }
 
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
@@ -131,7 +131,7 @@ pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
         let title = state.subscriptions[subscription].title.clone();
         if re_pod.is_match(&title) {
             state.subscriptions.remove(subscription);
-            delete(&title)?;
+            utils::delete(&title)?;
         }
     }
     Ok(())

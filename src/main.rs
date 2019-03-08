@@ -14,6 +14,7 @@ extern crate reqwest;
 extern crate rss;
 #[macro_use]
 extern crate serde_derive;
+extern crate percent_encoding;
 extern crate serde_json;
 extern crate serde_yaml;
 extern crate toml;
@@ -26,6 +27,7 @@ mod download;
 mod migration_handler;
 mod parser;
 mod playback;
+mod search;
 mod structs;
 mod utils;
 
@@ -38,7 +40,7 @@ mod errors {
 use self::structs::*;
 use errors::Result;
 
-const VERSION: &str = "0.10.3";
+const VERSION: &str = "0.11.0";
 
 fn main() -> Result<()> {
     utils::create_directories()?;
@@ -47,6 +49,6 @@ fn main() -> Result<()> {
     let config = Config::new()?;
     let mut app = parser::get_app(&VERSION);
     let matches = app.clone().get_matches();
-    command_handler::handle_matches(&VERSION, &mut state, &config, &mut app, &matches)?;
+    command_handler::handle_matches(&VERSION, &mut state, config, &mut app, &matches)?;
     state.save()
 }

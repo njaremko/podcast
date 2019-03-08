@@ -24,7 +24,7 @@ pub fn parse_sub_command(matches: &ArgMatches) -> commands::Command {
 pub fn handle_matches(
     version: &str,
     state: &mut State,
-    config: &Config,
+    config: Config,
     app: &mut App,
     matches: &ArgMatches,
 ) -> Result<()> {
@@ -43,7 +43,7 @@ pub fn handle_matches(
             arg_parser::subscribe(state, config, matches)?;
         }
         commands::Command::Search => {
-            println!("This feature is coming soon...");
+            arg_parser::search(state, config, matches)?;
         }
         commands::Command::Remove => {
             arg_parser::remove(state, matches)?;

@@ -1,10 +1,10 @@
 use crate::structs::*;
-use crate::utils::*;
+use crate::utils;
 
+use failure::Fail;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
-use failure::Fail;
 
 use failure::Error;
 use rayon::prelude::*;
@@ -53,23 +53,18 @@ pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) ->
 #[derive(Debug, Fail)]
 enum DownloadError {
     #[fail(display = "File already exists: {}", path)]
-    AlreadyExists {
-        path: String,
-    }
+    AlreadyExists { path: String },
 }
 
 pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
-    let mut path = get_podcast_dir()?;
+    let mut path = utils::get_podcast_dir()?;
     path.push(podcast_name);
-    create_dir_if_not_exist(&path)?;
+    utils::create_dir_if_not_exist(&path)?;
 
     if let (Some(mut title), Some(url)) = (episode.title(), episode.url()) {
-        episode.extension().map(|ext|  {
-            if !title.ends_with(".") {
-                title.push_str(".");
-            }
-            title.push_str(&ext);
-        });   
+        if let Some(ext) = episode.extension() {
+            title = utils::append_extension(&title, &ext);
+        }
         path.push(title);
         if !path.exists() {
             println!("Downloading: {:?}", &path);
@@ -79,7 +74,10 @@ pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
             let mut writer = BufWriter::new(file);
             io::copy(&mut reader, &mut writer)?;
         } else {
-            return Err(DownloadError::AlreadyExists{path: path.to_str().unwrap().to_string()}.into());
+            return Err(DownloadError::AlreadyExists {
+                path: path.to_str().unwrap().to_string(),
+            }
+            .into());
         }
     }
     Ok(())
@@ -142,10 +140,10 @@ pub fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
                 return Ok(());
             }
 
-            let mut path = get_podcast_dir()?;
+            let mut path = utils::get_podcast_dir()?;
             path.push(podcast.title());
 
-            already_downloaded(podcast.title()).map(|downloaded| {
+            utils::already_downloaded(podcast.title()).map(|downloaded| {
                 podcast
                     .episodes()
                     .par_iter()
@@ -160,8 +158,8 @@ pub fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn download_rss(config: &Config, url: &str) -> Result<(), Error> {
-    let channel = download_rss_feed(url)?;
+pub fn download_rss(config: Config, url: &str) -> Result<(), Error> {
+    let channel = utils::download_rss_feed(url)?;
     let mut download_limit = config.auto_download_limit as usize;
     if 0 < download_limit {
         println!(

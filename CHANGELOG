@@ -1,3 +1,6 @@
+0.11.0
+- Add podcast search support. Podcast index is a work in progress, but I'm working on it.
+
 0.10.0
 - Partial re-write of the application to be idiomatic
 - Improves performance throughout the application (downloads are also faster)
