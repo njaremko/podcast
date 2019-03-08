@@ -22,7 +22,7 @@
     - [x] fish
     - [x] powershell
     - [x] elvish
-- [ ] Searching for podcasts...(WIP)
+- [x] Searching for podcasts
 
 By default, podcasts are downloaded to `$HOME/Podcasts`, but this folder can be set with the `$PODCAST` environmental variable.
 
