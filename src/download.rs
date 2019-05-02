@@ -24,7 +24,7 @@ pub fn download_range(state: &State, p_search: &str, e_search: &str) -> Result<(
                 .par_iter()
                 .map(|ep_num| &episodes[episodes.len() - ep_num])
                 .map(|ep| download(podcast.title(), ep))
-                .flat_map(|e| e.err())
+                .flat_map(std::result::Result::err)
                 .for_each(|err| println!("Error: {}", err));
         }
     }
@@ -109,13 +109,13 @@ pub fn download_episode_by_name(
             if download_all {
                 filtered_episodes
                     .map(|ep| download(podcast.title(), ep))
-                    .flat_map(|e| e.err())
+                    .flat_map(std::result::Result::err)
                     .for_each(|err| eprintln!("Error: {}", err));
             } else {
                 filtered_episodes
                     .take(1)
                     .map(|ep| download(podcast.title(), ep))
-                    .flat_map(|e| e.err())
+                    .flat_map(std::result::Result::err)
                     .for_each(|err| eprintln!("Error: {}", err));
             }
         }
@@ -150,7 +150,7 @@ pub fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
                     .filter(|e| e.title().is_some())
                     .filter(|e| !downloaded.contains(&e.title().unwrap()))
                     .map(|e| download(podcast.title(), e))
-                    .flat_map(|e| e.err())
+                    .flat_map(std::result::Result::err)
                     .for_each(|err| eprintln!("Error: {}", err))
             })?;
         }
@@ -175,7 +175,7 @@ pub fn download_rss(config: Config, url: &str) -> Result<(), Error> {
         episodes[..download_limit]
             .par_iter()
             .map(|ep| download(podcast.title(), ep))
-            .flat_map(|e| e.err())
+            .flat_map(std::result::Result::err)
             .for_each(|err| eprintln!("Error downloading {}: {}", podcast.title(), err));
     }
     Ok(())
@@ -190,7 +190,7 @@ fn parse_download_episodes(e_search: &str) -> Result<HashSet<usize>, Error> {
         if elem.contains('-') {
             let range: Vec<usize> = elem
                 .split('-')
-                .map(|i| i.parse::<usize>())
+                .map(str::parse)
                 .collect::<Result<Vec<usize>, std::num::ParseIntError>>()?;
             ranges.push((range[0], range[1]));
         } else {

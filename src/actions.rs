@@ -77,7 +77,7 @@ pub fn update_subscription(sub: &mut Subscription) -> Result<()> {
         podcast.episodes()[..podcast.episodes().len() - sub.num_episodes]
             .par_iter()
             .map(|ep| download::download(podcast.title(), ep))
-            .flat_map(|e| e.err())
+            .flat_map(std::result::Result::err)
             .for_each(|err| eprintln!("Error: {}", err));
     }
     sub.num_episodes = podcast.episodes().len();

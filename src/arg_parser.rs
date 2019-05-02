@@ -147,6 +147,6 @@ pub fn search(state: &mut State, config: Config, matches: &ArgMatches) -> Result
         Some(r) => sub(state, config, r)?,
         None => eprintln!("Subscription failed. No url in API response."),
     }
-    
+
     Ok(())
 }

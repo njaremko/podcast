@@ -21,7 +21,10 @@ pub fn trim_extension(filename: &str) -> Option<String> {
 }
 
 pub fn find_extension(input: &str) -> Option<String> {
-    let s: Vec<String> = input.split('.').map(|s| s.to_string()).collect();
+    let s: Vec<String> = input
+        .split('.')
+        .map(std::string::ToString::to_string)
+        .collect();
     if s.len() > 1 {
         return s.last().cloned();
     }
