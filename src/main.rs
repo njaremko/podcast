@@ -1,5 +1,3 @@
-#![feature(impl_trait_in_bindings)]
-
 extern crate chrono;
 extern crate clap;
 extern crate dirs;

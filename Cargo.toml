@@ -1,7 +1,7 @@
 [package]
 name = "podcast"
 edition = "2018"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Nathan Jaremko <njaremko@gmail.com>"]
 description = "A command line podcast manager"
 license = "GPL-3.0"
@@ -21,13 +21,13 @@ name = "podcast"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = "2.33"
-dirs = "1.0"
+dirs = "2.0"
 failure = "0.1"
 lazy_static = "1.3"
-rayon = "1.0"
+rayon = "1.1"
 regex = "1.1"
 reqwest = "0.9"
-rss = {version = "1.7", features = ["from_url"] }
+rss = {version = "1.8", features = ["from_url"] }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
