@@ -51,7 +51,7 @@ $ podcast ls bro # List all the episodes of My Brother, My Brother, and Me
 (2) My Brother, My Brother and Me: Episode 02
 (1) My Brother, My Brother and Me: Episode 01
 $ podcast play bro # Play the latest episode of mbmbam
-$ podcast play "my brother" 446 # Play "MBMBaM 439: Face 2 Face: Candlenights 2018"
+$ podcast play "my brother" 439 # Play "MBMBaM 439: Face 2 Face: Candlenights 2018"
 $ podcast download bro # Download all episodes of mbmbam
 $ podcast download brother -e "The Naming" # Download the latest episode containing "The Naming"
 Downloading: /home/njaremko/Podcasts/My Brother, My Brother And Me/MBMBaM 440: The Naming of 2019.mp3
