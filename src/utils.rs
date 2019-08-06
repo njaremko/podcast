@@ -58,7 +58,7 @@ pub fn create_dir_if_not_exist(path: &PathBuf) -> Result<()> {
 
 pub fn create_directories() -> Result<()> {
     let mut path = get_podcast_dir()?;
-    writeln!(io::stdout().lock(), "Using PODCAST dir: {:?}", &path).ok();
+    writeln!(io::stderr().lock(), "Using PODCAST dir: {:?}", &path).ok();
     path.push(".rss");
     create_dir_if_not_exist(&path)
 }
