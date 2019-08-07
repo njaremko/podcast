@@ -13,6 +13,7 @@ use rayon::prelude::*;
 use regex::Regex;
 use reqwest;
 use rss::Channel;
+use semver_parser::version;
 use std::path::PathBuf;
 use toml;
 
@@ -113,7 +114,21 @@ pub fn check_for_update(version: &str) -> Result<()> {
     let latest = config["package"]["version"]
         .as_str()
         .unwrap_or_else(|| panic!("Cargo.toml didn't have a version {:?}", config));
-    if version != latest {
+    let local_version = match version::parse(&version) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Failed to parse version {}: {}", &version, e);
+            return Ok(());
+        }
+    };
+    let remote_version = match version::parse(&latest) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Failed to parse version {}: {}", &version, e);
+            return Ok(());
+        }
+    };
+    if local_version < remote_version {
         println!("New version available: {} -> {}", version, latest);
     }
     Ok(())
