@@ -75,8 +75,12 @@ pub async fn update_subscription(sub: &mut Subscription, config: Option<Config>)
 
     if sub.num_episodes < podcast.episodes().len() {
         let mut d_vec = vec![];
-        let subscription_limit = config.unwrap_or_else(|| Config::default()).download_subscription_limit.unwrap_or(-1);
-        let mut episodes = podcast.episodes()[..podcast.episodes().len() - sub.num_episodes].to_vec();
+        let subscription_limit = config
+            .unwrap_or_else(|| Config::default())
+            .download_subscription_limit
+            .unwrap_or(-1);
+        let mut episodes =
+            podcast.episodes()[..podcast.episodes().len() - sub.num_episodes].to_vec();
         episodes.reverse();
         if 0 < subscription_limit {
             for ep in episodes.iter().take(subscription_limit as usize) {

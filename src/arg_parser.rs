@@ -32,9 +32,11 @@ pub async fn download(state: &mut State, matches: &ArgMatches<'_>) -> Result<()>
             }
         }
         None => match download_matches.value_of("latest") {
-            Some(num_of_latest) => download::download_latest(&state, podcast, num_of_latest.parse()?).await?,
+            Some(num_of_latest) => {
+                download::download_latest(&state, podcast, num_of_latest.parse()?).await?
+            }
             None => download::download_all(&state, podcast).await?,
-        }
+        },
     }
     Ok(())
 }

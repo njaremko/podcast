@@ -5,6 +5,13 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
         .version(version)
         .author("Nathan J. <njaremko@gmail.com>")
         .about("A command line podcast manager")
+        .arg(
+            Arg::with_name("quiet")
+                .short("q")
+                .long("quiet")
+                .help("Output less stuff")
+                .required(false),
+        )
         .subcommand(
             SubCommand::with_name("download")
                 .about("download episodes of podcast")
@@ -22,12 +29,12 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                 )
                 .arg(
                     Arg::with_name("latest")
-                    .short("l")
-                    .long("latest")
-                    .value_name("LATEST")
-                    .help("Downloads this many of the latest episodes")
-                    .takes_value(true)
-                    .required(false),
+                        .short("l")
+                        .long("latest")
+                        .value_name("LATEST")
+                        .help("Downloads this many of the latest episodes")
+                        .takes_value(true)
+                        .required(false),
                 )
                 .arg(
                     Arg::with_name("name")

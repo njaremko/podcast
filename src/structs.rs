@@ -1,7 +1,7 @@
 use super::actions::*;
 use super::utils::*;
-use core::ops::Deref;
 use crate::errors::*;
+use core::ops::Deref;
 
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -35,6 +35,7 @@ fn create_new_config_file(path: &PathBuf) -> Result<Config> {
     let config = Config {
         auto_download_limit: Some(1),
         download_subscription_limit: Some(1),
+        quiet: Some(false),
     };
     serde_yaml::to_writer(file, &config)?;
     Ok(config)
@@ -44,6 +45,7 @@ fn create_new_config_file(path: &PathBuf) -> Result<Config> {
 pub struct Config {
     pub auto_download_limit: Option<i64>,
     pub download_subscription_limit: Option<i64>,
+    pub quiet: Option<bool>,
 }
 
 impl Config {

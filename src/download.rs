@@ -21,9 +21,12 @@ pub async fn download_range(state: &State, p_search: &str, e_search: &str) -> Re
             let episodes_to_download = parse_download_episodes(e_search)?;
 
             for ep_num in episodes_to_download {
-                let d = download(podcast.title().into(), episodes[episodes.len() - ep_num].clone());
+                let d = download(
+                    podcast.title().into(),
+                    episodes[episodes.len() - ep_num].clone(),
+                );
                 d_vec.push(d);
-            } 
+            }
         }
     }
     for c in futures::future::join_all(d_vec).await.iter() {
@@ -58,7 +61,10 @@ pub async fn download_episode_by_num(
             if re_pod.is_match(&subscription.title) {
                 let podcast = Podcast::from_title(&subscription.title)?;
                 let episodes = podcast.episodes();
-                d_vec.push(download(podcast.title().into(), episodes[episodes.len() - ep_num].clone()));
+                d_vec.push(download(
+                    podcast.title().into(),
+                    episodes[episodes.len() - ep_num].clone(),
+                ));
             }
         }
         for c in futures::future::join_all(d_vec).await.iter() {
@@ -131,7 +137,6 @@ pub async fn download_episode_by_name(
                             .contains(&e_search.to_lowercase())
                     });
 
-            
             if download_all {
                 for ep in filtered_episodes {
                     let d = download(podcast.title().into(), ep.clone());
@@ -143,7 +148,7 @@ pub async fn download_episode_by_name(
                     d_vec.push(d);
                 }
             }
-        }  
+        }
     }
     for c in futures::future::join_all(d_vec).await.iter() {
         if let Err(err) = c {
