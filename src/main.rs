@@ -38,15 +38,16 @@ mod errors {
 use self::structs::*;
 use errors::Result;
 
-const VERSION: &str = "0.12.1";
+const VERSION: &str = "0.13.0";
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     utils::create_directories()?;
     migration_handler::migrate()?;
-    let mut state = State::new(VERSION)?;
+    let mut state = State::new(VERSION).await?;
     let config = Config::new()?;
     let mut app = parser::get_app(&VERSION);
     let matches = app.clone().get_matches();
-    command_handler::handle_matches(&VERSION, &mut state, config, &mut app, &matches)?;
+    command_handler::handle_matches(&VERSION, &mut state, config, &mut app, &matches).await?;
     state.save()
 }

@@ -21,17 +21,17 @@ pub fn parse_sub_command(matches: &ArgMatches) -> commands::Command {
     }
 }
 
-pub fn handle_matches(
+pub async fn handle_matches(
     version: &str,
     state: &mut State,
     config: Config,
-    app: &mut App,
-    matches: &ArgMatches,
+    app: &mut App<'_, '_>,
+    matches: &ArgMatches<'_>,
 ) -> Result<()> {
     let command = parse_sub_command(matches);
     match command {
         commands::Command::Download => {
-            arg_parser::download(state, matches)?;
+            arg_parser::download(state, matches).await?;
         }
         commands::Command::List => {
             arg_parser::list(state, matches)?;
@@ -40,10 +40,10 @@ pub fn handle_matches(
             arg_parser::play(state, matches)?;
         }
         commands::Command::Subscribe => {
-            arg_parser::subscribe(state, config, matches)?;
+            arg_parser::subscribe(state, config, matches).await?;
         }
         commands::Command::Search => {
-            arg_parser::search(state, config, matches)?;
+            arg_parser::search(state, config, matches).await?;
         }
         commands::Command::Remove => {
             arg_parser::remove(state, matches)?;
@@ -52,10 +52,10 @@ pub fn handle_matches(
             arg_parser::complete(app, matches)?;
         }
         commands::Command::Refresh => {
-            update_rss(state);
+            update_rss(state, Some(config)).await?;
         }
         commands::Command::Update => {
-            check_for_update(version)?;
+            check_for_update(version).await?;
         }
         _ => (),
     };

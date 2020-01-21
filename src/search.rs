@@ -1,7 +1,6 @@
 use failure::Error;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use reqwest;
-use serde_json;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Response {
@@ -37,27 +36,24 @@ impl RssResponse {
 
 const BASE: &str = "https://podcastapi.ca";
 
-pub fn search_for_podcast(podcast: &str) -> Result<Response, Error> {
+pub async fn search_for_podcast(podcast: &str) -> Result<Response, Error> {
     let encoded = utf8_percent_encode(podcast, NON_ALPHANUMERIC).to_string();
     let url = BASE.to_string() + "/query/" + &encoded;
-    let resp = reqwest::get(&url)?;
-    let r: Response = serde_json::from_reader(resp)?;
+    let r = reqwest::get(&url).await?.json::<Response>().await?;
     Ok(r)
 }
 
-pub fn search_for_episode(podcast: &str, ep: &str) -> Result<Response, Error> {
+pub async fn search_for_episode(podcast: &str, ep: &str) -> Result<Response, Error> {
     let podcast_encoded = utf8_percent_encode(podcast, NON_ALPHANUMERIC).to_string();
     let ep_encoded = utf8_percent_encode(ep, NON_ALPHANUMERIC).to_string();
     let url = BASE.to_string() + "/query/" + &podcast_encoded + "/episode/" + &ep_encoded;
-    let resp = reqwest::get(&url)?;
-    let r: Response = serde_json::from_reader(resp)?;
+    let r = reqwest::get(&url).await?.json::<Response>().await?;
     Ok(r)
 }
 
-pub fn retrieve_rss(podcast: &str) -> Result<RssResponse, Error> {
+pub async fn retrieve_rss(podcast: &str) -> Result<RssResponse, Error> {
     let encoded = utf8_percent_encode(podcast, NON_ALPHANUMERIC).to_string();
     let url = BASE.to_string() + "/rss/" + &encoded;
-    let resp = reqwest::get(&url)?;
-    let r: RssResponse = serde_json::from_reader(resp)?;
+    let r = reqwest::get(&url).await?.json::<RssResponse>().await?;
     Ok(r)
 }

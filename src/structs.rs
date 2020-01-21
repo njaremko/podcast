@@ -1,6 +1,5 @@
 use super::actions::*;
 use super::utils::*;
-use crate::errors::*;
 use core::ops::Deref;
 
 use std::collections::HashSet;
@@ -24,29 +23,30 @@ lazy_static! {
     static ref FILENAME_ESCAPE: Regex = Regex::new(ESCAPE_REGEX).unwrap();
 }
 
-fn create_new_config_file(path: &PathBuf) -> Result<Config> {
+fn create_new_config_file(path: &PathBuf) -> Result<Config, Box<dyn std::error::Error>> {
     writeln!(
         io::stdout().lock(),
         "Creating new config file at {:?}",
         &path
     )
     .ok();
-    let download_limit = 1;
     let file = File::create(&path)?;
     let config = Config {
-        auto_download_limit: download_limit,
+        auto_download_limit: Some(1),
+        download_subscription_limit: Some(1),
     };
     serde_yaml::to_writer(file, &config)?;
     Ok(config)
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-    pub auto_download_limit: i64,
+    pub auto_download_limit: Option<i64>,
+    pub download_subscription_limit: Option<i64>,
 }
 
 impl Config {
-    pub fn new() -> Result<Config> {
+    pub fn new() -> Result<Config, Box<dyn std::error::Error>> {
         let mut path = get_podcast_dir()?;
         path.push(".config.yaml");
         let config = if path.exists() {
@@ -96,7 +96,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(version: &str) -> Result<State> {
+    pub async fn new(version: &str) -> Result<State, Box<dyn std::error::Error>> {
         let path = get_sub_file()?;
         if path.exists() {
             let file = File::open(&path)?;
@@ -108,8 +108,9 @@ impl State {
                     .signed_duration_since(state.last_run_time)
                     .num_seconds()
             {
-                update_rss(&mut state);
-                check_for_update(&state.version)?;
+                let config = Config::new()?;
+                update_rss(&mut state, Some(config)).await?;
+                check_for_update(&state.version).await?;
             }
             state.last_run_time = Utc::now();
             state.save()?;
@@ -132,12 +133,14 @@ impl State {
         &mut self.subscriptions
     }
 
-    pub fn subscribe(&mut self, url: &str) -> Result<()> {
+    pub async fn subscribe(&mut self, url: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut set = HashSet::new();
         for sub in self.subscriptions() {
             set.insert(sub.title.clone());
         }
-        let podcast = Podcast::from(Channel::from_url(url)?);
+        let resp = reqwest::get(url).await?.bytes().await?;
+        let channel = Channel::read_from(BufReader::new(&resp[..]))?;
+        let podcast = Podcast::from(channel);
         if !set.contains(podcast.title()) {
             self.subscriptions.push(Subscription {
                 title: String::from(podcast.title()),
@@ -148,7 +151,7 @@ impl State {
         self.save()
     }
 
-    pub fn save(&self) -> Result<()> {
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut path = get_sub_file()?;
         path.set_extension("json.tmp");
         let file = File::create(&path)?;
@@ -186,11 +189,11 @@ impl Podcast {
     }
 
     #[allow(dead_code)]
-    pub fn from_url(url: &str) -> Result<Podcast> {
+    pub fn from_url(url: &str) -> Result<Podcast, Box<dyn std::error::Error>> {
         Ok(Podcast::from(Channel::from_url(url)?))
     }
 
-    pub fn from_title(title: &str) -> Result<Podcast> {
+    pub fn from_title(title: &str) -> Result<Podcast, Box<dyn std::error::Error>> {
         let mut path = get_xml_dir()?;
         let mut filename = String::from(title);
         filename.push_str(".xml");

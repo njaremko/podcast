@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::env;
 use std::fs::{self, DirBuilder, File};
-use std::io::{self, BufReader, Read, Write};
+use std::io::{self, BufReader, Write};
 use std::path::PathBuf;
 
 use crate::errors::*;
@@ -118,20 +118,18 @@ pub fn get_xml_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn download_rss_feed(url: &str) -> Result<Channel> {
+pub async fn download_rss_feed(url: &str) -> Result<Channel> {
     println!("Downloading RSS feed...");
     let mut path = get_podcast_dir()?;
     path.push(".rss");
     create_dir_if_not_exist(&path)?;
-    let mut resp = reqwest::get(url)?;
-    let mut content: Vec<u8> = Vec::new();
-    resp.read_to_end(&mut content)?;
-    let channel = Channel::read_from(BufReader::new(&content[..]))?;
+    let resp = reqwest::get(url).await?.bytes().await?;
+    let channel = Channel::read_from(BufReader::new(&resp[..]))?;
     let mut filename = String::from(channel.title());
     filename.push_str(".xml");
     path.push(filename);
     let mut file = File::create(&path)?;
-    file.write_all(&content)?;
+    file.write_all(&resp)?;
     Ok(channel)
 }
 

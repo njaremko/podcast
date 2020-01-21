@@ -7,44 +7,57 @@ use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
 
 use failure::Error;
-use rayon::prelude::*;
 use regex::Regex;
 use reqwest;
 
-pub fn download_range(state: &State, p_search: &str, e_search: &str) -> Result<(), Error> {
+pub async fn download_range(state: &State, p_search: &str, e_search: &str) -> Result<(), Error> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
+    let mut d_vec = vec![];
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
             let episodes = podcast.episodes();
             let episodes_to_download = parse_download_episodes(e_search)?;
 
-            episodes_to_download
-                .par_iter()
-                .map(|ep_num| &episodes[episodes.len() - ep_num])
-                .map(|ep| download(podcast.title(), ep))
-                .flat_map(std::result::Result::err)
-                .for_each(|err| println!("Error: {}", err));
+            for ep_num in episodes_to_download {
+                let d = download(podcast.title().into(), episodes[episodes.len() - ep_num].clone());
+                d_vec.push(d);
+            } 
+        }
+    }
+    for c in futures::future::join_all(d_vec).await.iter() {
+        if let Err(err) = c {
+            println!("Error: {}", err);
         }
     }
     Ok(())
 }
 
-pub fn download_episode_by_num(state: &State, p_search: &str, e_search: &str) -> Result<(), Error> {
+pub async fn download_episode_by_num(
+    state: &State,
+    p_search: &str,
+    e_search: &str,
+) -> Result<(), Error> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
     if let Ok(ep_num) = e_search.parse::<usize>() {
+        let mut d_vec = vec![];
         for subscription in &state.subscriptions {
             if re_pod.is_match(&subscription.title) {
                 let podcast = Podcast::from_title(&subscription.title)?;
                 let episodes = podcast.episodes();
-                download(podcast.title(), &episodes[episodes.len() - ep_num])?;
+                d_vec.push(download(podcast.title().into(), episodes[episodes.len() - ep_num].clone()));
+            }
+        }
+        for c in futures::future::join_all(d_vec).await.iter() {
+            if let Err(err) = c {
+                println!("Error: {}", err);
             }
         }
     } else {
         eprintln!("Failed to parse episode number...\nAttempting to find episode by name...");
-        download_episode_by_name(state, p_search, e_search, false)?;
+        download_episode_by_name(state, p_search, e_search, false).await?;
     }
 
     Ok(())
@@ -56,7 +69,7 @@ enum DownloadError {
     AlreadyExists { path: String },
 }
 
-pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
+pub async fn download(podcast_name: String, episode: Episode) -> Result<(), Error> {
     let mut path = utils::get_podcast_dir()?;
     path.push(podcast_name);
     utils::create_dir_if_not_exist(&path)?;
@@ -68,9 +81,9 @@ pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
         path.push(title);
         if !path.exists() {
             println!("Downloading: {:?}", &path);
-            let resp = reqwest::get(url)?;
+            let resp = reqwest::get(url).await?.bytes().await?;
             let file = File::create(&path)?;
-            let mut reader = BufReader::new(resp);
+            let mut reader = BufReader::new(&resp[..]);
             let mut writer = BufWriter::new(file);
             io::copy(&mut reader, &mut writer)?;
         } else {
@@ -83,7 +96,7 @@ pub fn download(podcast_name: &str, episode: &Episode) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn download_episode_by_name(
+pub async fn download_episode_by_name(
     state: &State,
     p_search: &str,
     e_search: &str,
@@ -91,6 +104,7 @@ pub fn download_episode_by_name(
 ) -> Result<(), Error> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
+    let mut d_vec = vec![];
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
@@ -106,26 +120,32 @@ pub fn download_episode_by_name(
                             .contains(&e_search.to_lowercase())
                     });
 
+            
             if download_all {
-                filtered_episodes
-                    .map(|ep| download(podcast.title(), ep))
-                    .flat_map(std::result::Result::err)
-                    .for_each(|err| eprintln!("Error: {}", err));
+                for ep in filtered_episodes {
+                    let d = download(podcast.title().into(), ep.clone());
+                    d_vec.push(d);
+                }
             } else {
-                filtered_episodes
-                    .take(1)
-                    .map(|ep| download(podcast.title(), ep))
-                    .flat_map(std::result::Result::err)
-                    .for_each(|err| eprintln!("Error: {}", err));
+                for ep in filtered_episodes.take(1) {
+                    let d = download(podcast.title().into(), ep.clone());
+                    d_vec.push(d);
+                }
             }
+        }  
+    }
+    for c in futures::future::join_all(d_vec).await.iter() {
+        if let Err(err) = c {
+            println!("Error: {}", err);
         }
     }
     Ok(())
 }
 
-pub fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
+pub async fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
+    let mut d_vec = vec![];
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
@@ -143,24 +163,31 @@ pub fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
             let mut path = utils::get_podcast_dir()?;
             path.push(podcast.title());
 
-            utils::already_downloaded(podcast.title()).map(|downloaded| {
-                podcast
-                    .episodes()
-                    .par_iter()
+            for downloaded in utils::already_downloaded(podcast.title()) {
+                let episodes = podcast.episodes();
+                for e in episodes
+                    .iter()
                     .filter(|e| e.title().is_some())
                     .filter(|e| !downloaded.contains(&e.title().unwrap()))
-                    .map(|e| download(podcast.title(), e))
-                    .flat_map(std::result::Result::err)
-                    .for_each(|err| eprintln!("Error: {}", err))
-            })?;
+                    .cloned()
+                {
+                    let d = download(podcast.title().into(), e);
+                    d_vec.push(d);
+                }
+            }
+        }
+    }
+    for c in futures::future::join_all(d_vec).await.iter() {
+        if let Err(err) = c {
+            println!("Error: {}", err);
         }
     }
     Ok(())
 }
 
-pub fn download_rss(config: Config, url: &str) -> Result<(), Error> {
-    let channel = utils::download_rss_feed(url)?;
-    let mut download_limit = config.auto_download_limit as usize;
+pub async fn download_rss(config: Config, url: &str) -> Result<(), Error> {
+    let channel = utils::download_rss_feed(url).await?;
+    let mut download_limit = config.auto_download_limit.unwrap_or(1) as usize;
     if 0 < download_limit {
         println!(
             "Subscribe auto-download limit set to: {}\nDownloading episode(s)...",
@@ -172,11 +199,15 @@ pub fn download_rss(config: Config, url: &str) -> Result<(), Error> {
             download_limit = episodes.len()
         }
 
-        episodes[..download_limit]
-            .par_iter()
-            .map(|ep| download(podcast.title(), ep))
-            .flat_map(std::result::Result::err)
-            .for_each(|err| eprintln!("Error downloading {}: {}", podcast.title(), err));
+        let mut d_vec = vec![];
+        for ep in episodes[..download_limit].iter() {
+            d_vec.push(download(podcast.title().into(), ep.clone()));
+        }
+        for c in futures::future::join_all(d_vec).await.iter() {
+            if let Err(err) = c {
+                eprintln!("Error downloading {}: {}", podcast.title(), err)
+            }
+        }
     }
     Ok(())
 }
