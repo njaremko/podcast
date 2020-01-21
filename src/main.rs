@@ -39,7 +39,7 @@ use self::structs::*;
 use errors::Result;
 use std::io::Write;
 
-const VERSION: &str = "0.13.0";
+const VERSION: &str = "0.14.0";
 
 #[tokio::main]
 async fn main() -> Result<()> {
