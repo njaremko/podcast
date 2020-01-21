@@ -34,6 +34,17 @@ pub async fn download_range(state: &State, p_search: &str, e_search: &str) -> Re
     Ok(())
 }
 
+fn find_matching_podcast(state: &State, p_search: &str) -> Result<Option<Podcast>, Error> {
+    let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
+    for subscription in &state.subscriptions {
+        if re_pod.is_match(&subscription.title) {
+            let podcast = Podcast::from_title(&subscription.title)?;
+            return Ok(Some(podcast));
+        }
+    }
+    Ok(None)
+}
+
 pub async fn download_episode_by_num(
     state: &State,
     p_search: &str,
@@ -180,6 +191,22 @@ pub async fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
     for c in futures::future::join_all(d_vec).await.iter() {
         if let Err(err) = c {
             println!("Error: {}", err);
+        }
+    }
+    Ok(())
+}
+
+pub async fn download_latest(state: &State, p_search: &str, latest: usize) -> Result<(), Error> {
+    if let Some(podcast) = find_matching_podcast(state, p_search)? {
+        let episodes = podcast.episodes();
+        let mut d_vec = vec![];
+        for ep in &episodes[..latest] {
+            d_vec.push(download(podcast.title().into(), ep.clone()));
+        }
+        for c in futures::future::join_all(d_vec).await.iter() {
+            if let Err(err) = c {
+                println!("Error: {}", err);
+            }
         }
     }
     Ok(())

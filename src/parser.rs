@@ -21,6 +21,15 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                         .index(2),
                 )
                 .arg(
+                    Arg::with_name("latest")
+                    .short("l")
+                    .long("latest")
+                    .value_name("LATEST")
+                    .help("Downloads this many of the latest episodes")
+                    .takes_value(true)
+                    .required(false),
+                )
+                .arg(
                     Arg::with_name("name")
                         .short("e")
                         .long("episode")
