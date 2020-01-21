@@ -1,6 +1,7 @@
 use super::actions::*;
 use super::utils::*;
 use core::ops::Deref;
+use crate::errors::*;
 
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -23,7 +24,7 @@ lazy_static! {
     static ref FILENAME_ESCAPE: Regex = Regex::new(ESCAPE_REGEX).unwrap();
 }
 
-fn create_new_config_file(path: &PathBuf) -> Result<Config, Box<dyn std::error::Error>> {
+fn create_new_config_file(path: &PathBuf) -> Result<Config> {
     writeln!(
         io::stdout().lock(),
         "Creating new config file at {:?}",
@@ -46,7 +47,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Config, Box<dyn std::error::Error>> {
+    pub fn new() -> Result<Config> {
         let mut path = get_podcast_dir()?;
         path.push(".config.yaml");
         let config = if path.exists() {
@@ -96,7 +97,7 @@ pub struct State {
 }
 
 impl State {
-    pub async fn new(version: &str) -> Result<State, Box<dyn std::error::Error>> {
+    pub async fn new(version: &str) -> Result<State> {
         let path = get_sub_file()?;
         if path.exists() {
             let file = File::open(&path)?;
@@ -133,7 +134,7 @@ impl State {
         &mut self.subscriptions
     }
 
-    pub async fn subscribe(&mut self, url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn subscribe(&mut self, url: &str) -> Result<()> {
         let mut set = HashSet::new();
         for sub in self.subscriptions() {
             set.insert(sub.title.clone());
@@ -151,7 +152,7 @@ impl State {
         self.save()
     }
 
-    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save(&self) -> Result<()> {
         let mut path = get_sub_file()?;
         path.set_extension("json.tmp");
         let file = File::create(&path)?;
@@ -189,11 +190,11 @@ impl Podcast {
     }
 
     #[allow(dead_code)]
-    pub fn from_url(url: &str) -> Result<Podcast, Box<dyn std::error::Error>> {
+    pub fn from_url(url: &str) -> Result<Podcast> {
         Ok(Podcast::from(Channel::from_url(url)?))
     }
 
-    pub fn from_title(title: &str) -> Result<Podcast, Box<dyn std::error::Error>> {
+    pub fn from_title(title: &str) -> Result<Podcast> {
         let mut path = get_xml_dir()?;
         let mut filename = String::from(title);
         filename.push_str(".xml");
