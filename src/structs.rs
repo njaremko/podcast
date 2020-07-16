@@ -99,7 +99,7 @@ pub struct State {
 }
 
 impl State {
-    pub async fn new(version: &str) -> Result<State> {
+    pub async fn new(client: &reqwest::Client, version: &str) -> Result<State> {
         let path = get_sub_file()?;
         if path.exists() {
             let file = File::open(&path)?;
@@ -112,7 +112,7 @@ impl State {
                     .num_seconds()
             {
                 let config = Config::new()?;
-                update_rss(&mut state, Some(config)).await?;
+                update_rss(client, &mut state, Some(config)).await?;
                 check_for_update(&state.version).await?;
             }
             state.last_run_time = Utc::now();

@@ -10,7 +10,7 @@ use failure::Error;
 use regex::Regex;
 use reqwest;
 
-pub async fn download_range(state: &State, p_search: &str, e_search: &str) -> Result<(), Error> {
+pub async fn download_range(client: &reqwest::Client, state: &State, p_search: &str, e_search: &str) -> Result<(), Error> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
     let mut d_vec = vec![];
@@ -22,6 +22,7 @@ pub async fn download_range(state: &State, p_search: &str, e_search: &str) -> Re
 
             for ep_num in episodes_to_download {
                 let d = download(
+                    client,
                     podcast.title().into(),
                     episodes[episodes.len() - ep_num].clone(),
                 );
@@ -49,6 +50,7 @@ fn find_matching_podcast(state: &State, p_search: &str) -> Result<Option<Podcast
 }
 
 pub async fn download_episode_by_num(
+    client: &reqwest::Client, 
     state: &State,
     p_search: &str,
     e_search: &str,
@@ -62,6 +64,7 @@ pub async fn download_episode_by_num(
                 let podcast = Podcast::from_title(&subscription.title)?;
                 let episodes = podcast.episodes();
                 d_vec.push(download(
+                    client,
                     podcast.title().into(),
                     episodes[episodes.len() - ep_num].clone(),
                 ));
@@ -74,7 +77,7 @@ pub async fn download_episode_by_num(
         }
     } else {
         eprintln!("Failed to parse episode number...\nAttempting to find episode by name...");
-        download_episode_by_name(state, p_search, e_search, false).await?;
+        download_episode_by_name(client, state, p_search, e_search, false).await?;
     }
 
     Ok(())
@@ -86,7 +89,7 @@ enum DownloadError {
     AlreadyExists { path: String },
 }
 
-pub async fn download(podcast_name: String, episode: Episode) -> Result<(), Error> {
+pub async fn download(client: &reqwest::Client, podcast_name: String, episode: Episode) -> Result<(), Error> {
     let mut path = utils::get_podcast_dir()?;
     path.push(podcast_name);
     utils::create_dir_if_not_exist(&path)?;
@@ -98,7 +101,7 @@ pub async fn download(podcast_name: String, episode: Episode) -> Result<(), Erro
         path.push(title);
         if !path.exists() {
             println!("Downloading: {:?}", &path);
-            let resp = reqwest::get(url).await?.bytes().await?;
+            let resp = client.get(url).send().await?.bytes().await?;
             let file = File::create(&path)?;
             let mut reader = BufReader::new(&resp[..]);
             let mut writer = BufWriter::new(file);
@@ -114,6 +117,7 @@ pub async fn download(podcast_name: String, episode: Episode) -> Result<(), Erro
 }
 
 pub async fn download_episode_by_name(
+    client: &reqwest::Client, 
     state: &State,
     p_search: &str,
     e_search: &str,
@@ -139,12 +143,12 @@ pub async fn download_episode_by_name(
 
             if download_all {
                 for ep in filtered_episodes {
-                    let d = download(podcast.title().into(), ep.clone());
+                    let d = download(client, podcast.title().into(), ep.clone());
                     d_vec.push(d);
                 }
             } else {
                 for ep in filtered_episodes.take(1) {
-                    let d = download(podcast.title().into(), ep.clone());
+                    let d = download(client, podcast.title().into(), ep.clone());
                     d_vec.push(d);
                 }
             }
@@ -158,7 +162,7 @@ pub async fn download_episode_by_name(
     Ok(())
 }
 
-pub async fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
+pub async fn download_all(client: &reqwest::Client, state: &State, p_search: &str) -> Result<(), Error> {
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
     let mut d_vec = vec![];
@@ -187,7 +191,7 @@ pub async fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
                     .filter(|e| !downloaded.contains(&e.title().unwrap()))
                     .cloned()
                 {
-                    let d = download(podcast.title().into(), e);
+                    let d = download(client, podcast.title().into(), e);
                     d_vec.push(d);
                 }
             }
@@ -201,12 +205,12 @@ pub async fn download_all(state: &State, p_search: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn download_latest(state: &State, p_search: &str, latest: usize) -> Result<(), Error> {
+pub async fn download_latest(client: &reqwest::Client, state: &State, p_search: &str, latest: usize) -> Result<(), Error> {
     if let Some(podcast) = find_matching_podcast(state, p_search)? {
         let episodes = podcast.episodes();
         let mut d_vec = vec![];
         for ep in &episodes[..latest] {
-            d_vec.push(download(podcast.title().into(), ep.clone()));
+            d_vec.push(download(client, podcast.title().into(), ep.clone()));
         }
         for c in futures::future::join_all(d_vec).await.iter() {
             if let Err(err) = c {
@@ -217,7 +221,7 @@ pub async fn download_latest(state: &State, p_search: &str, latest: usize) -> Re
     Ok(())
 }
 
-pub async fn download_rss(config: Config, url: &str) -> Result<(), Error> {
+pub async fn download_rss(client: &reqwest::Client, config: Config, url: &str) -> Result<(), Error> {
     let channel = utils::download_rss_feed(url).await?;
     let mut download_limit = config.auto_download_limit.unwrap_or(1) as usize;
     if 0 < download_limit {
@@ -233,7 +237,7 @@ pub async fn download_rss(config: Config, url: &str) -> Result<(), Error> {
 
         let mut d_vec = vec![];
         for ep in episodes[..download_limit].iter() {
-            d_vec.push(download(podcast.title().into(), ep.clone()));
+            d_vec.push(download(client, podcast.title().into(), ep.clone()));
         }
         for c in futures::future::join_all(d_vec).await.iter() {
             if let Err(err) = c {

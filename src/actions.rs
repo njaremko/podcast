@@ -49,7 +49,7 @@ pub fn list_episodes(search: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_subscription(sub: &mut Subscription, config: Option<Config>) -> Result<()> {
+pub async fn update_subscription(client: &reqwest::Client, sub: &mut Subscription, config: Option<Config>) -> Result<()> {
     println!("Updating {}", sub.title);
     let mut path: PathBuf = utils::get_podcast_dir()?;
     path.push(&sub.title);
@@ -84,11 +84,11 @@ pub async fn update_subscription(sub: &mut Subscription, config: Option<Config>)
         episodes.reverse();
         if 0 < subscription_limit {
             for ep in episodes.iter().take(subscription_limit as usize) {
-                d_vec.push(download::download(podcast.title().into(), ep.clone()));
+                d_vec.push(download::download(client, podcast.title().into(), ep.clone()));
             }
         } else {
             for ep in episodes.iter() {
-                d_vec.push(download::download(podcast.title().into(), ep.clone()));
+                d_vec.push(download::download(client, podcast.title().into(), ep.clone()));
             }
         }
         for c in futures::future::join_all(d_vec).await.iter() {
@@ -101,11 +101,11 @@ pub async fn update_subscription(sub: &mut Subscription, config: Option<Config>)
     Ok(())
 }
 
-pub async fn update_rss(state: &mut State, config: Option<Config>) -> Result<()> {
+pub async fn update_rss(client: &reqwest::Client,state: &mut State, config: Option<Config>) -> Result<()> {
     println!("Checking for new episodes...");
     let mut d_vec = vec![];
     for sub in state.subscriptions_mut() {
-        d_vec.push(update_subscription(sub, config));
+        d_vec.push(update_subscription(client, sub, config));
     }
     for c in futures::future::join_all(d_vec).await.iter() {
         if let Err(err) = c {

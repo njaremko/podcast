@@ -44,7 +44,8 @@ const VERSION: &str = "0.16.0";
 async fn main() -> Result<()> {
     utils::create_directories()?;
     migration_handler::migrate()?;
-    let mut state = State::new(VERSION).await?;
+    let client = reqwest::Client::new();
+    let mut state = State::new(&client, VERSION).await?;
     let config = Config::new()?;
     if !config.quiet.unwrap_or(false) {
         let path = utils::get_podcast_dir()?;
@@ -52,6 +53,6 @@ async fn main() -> Result<()> {
     }
     let mut app = parser::get_app(&VERSION);
     let matches = app.clone().get_matches();
-    command_handler::handle_matches(&VERSION, &mut state, config, &mut app, &matches).await?;
+    command_handler::handle_matches(&VERSION, &client, &mut state, config, &mut app, &matches).await?;
     state.save()
 }
