@@ -9,7 +9,6 @@ use crate::actions::*;
 use crate::download;
 use crate::errors::*;
 use crate::playback;
-use crate::search;
 use crate::structs::*;
 
 pub async fn download(state: &mut State, matches: &ArgMatches<'_>) -> Result<()> {
@@ -112,7 +111,7 @@ pub fn complete(app: &mut App, matches: &ArgMatches) -> Result<()> {
 pub async fn search(state: &mut State, config: Config, matches: &ArgMatches<'_>) -> Result<()> {
     let matches = matches.subcommand_matches("search").unwrap();
     let podcast = matches.value_of("PODCAST").unwrap();
-    let resp = search::search_for_podcast(podcast).await?;
+    let resp = podcast_search::search(podcast).await?;
     if resp.results.is_empty() {
         println!("No Results");
         return Ok(());
@@ -122,7 +121,13 @@ pub async fn search(state: &mut State, config: Config, matches: &ArgMatches<'_>)
         let stdout = io::stdout();
         let mut lock = stdout.lock();
         for (i, r) in resp.results.iter().enumerate() {
-            writeln!(&mut lock, "({}) {}", i, r.collection_name.clone().unwrap_or_else(|| "".to_string()))?;
+            writeln!(
+                &mut lock,
+                "({}) {} [{}]",
+                i,
+                r.collection_name.clone().unwrap_or_else(|| "".to_string()),
+                r.feed_url.clone().unwrap_or_else(|| "".to_string())
+            )?;
         }
     }
 

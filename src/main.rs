@@ -25,7 +25,6 @@ mod download;
 mod migration_handler;
 mod parser;
 mod playback;
-mod search;
 mod structs;
 mod utils;
 
@@ -39,7 +38,7 @@ use self::structs::*;
 use errors::Result;
 use std::io::Write;
 
-const VERSION: &str = "0.15.0";
+const VERSION: &str = "0.16.0";
 
 #[tokio::main]
 async fn main() -> Result<()> {
