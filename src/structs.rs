@@ -11,7 +11,7 @@ use chrono::prelude::*;
 use regex::Regex;
 use rss::{Channel, Item};
 use serde_json;
-use std::path::PathBuf;
+use std::{path::PathBuf};
 
 #[cfg(target_os = "macos")]
 const ESCAPE_REGEX: &str = r"/";
@@ -92,53 +92,113 @@ impl Subscription {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct State {
+pub struct PublicState {
     pub version: String,
     pub last_run_time: DateTime<Utc>,
+    pub config: Config,
     pub subscriptions: Vec<Subscription>,
 }
 
+impl From<State> for PublicState {
+    fn from(internal_state: State) -> Self {
+        PublicState {
+            version: internal_state.version,
+            last_run_time: internal_state.last_run_time,
+            config: internal_state.config,
+            subscriptions: internal_state.subscriptions,
+        }
+    }
+}
+
+impl PublicState {
+    pub fn save(&self) -> Result<()> {
+        let mut path = config_path()?;
+        path.set_extension("json.tmp");
+        let file = File::create(&path)?;
+        serde_json::to_writer(BufWriter::new(file), self)?;
+        fs::rename(&path, config_path()?)?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct State {
+    pub version: String,
+    pub last_run_time: DateTime<Utc>,
+    pub config: Config,
+    pub subscriptions: Vec<Subscription>,
+    pub client: reqwest::Client,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+struct ParseState {
+    version: Option<String>,
+    last_run_time: Option<DateTime<Utc>>,
+    config: Option<Config>,
+    subscriptions: Option<Vec<Subscription>>,
+}
+
+impl From<ParseState> for State {
+    fn from(internal_state: ParseState) -> Self {
+        State {
+            version: internal_state.version.unwrap(),
+            last_run_time: internal_state.last_run_time.unwrap_or_else(|| Utc::now()),
+            config: internal_state.config.unwrap_or_else(|| Config::default()),
+            subscriptions: internal_state.subscriptions.unwrap_or_else(|| vec![]),
+            client: reqwest::Client::new(),
+        }
+    }
+}
+
 impl State {
-    pub async fn new(client: &reqwest::Client, version: &str) -> Result<State> {
-        let path = get_sub_file()?;
-        if path.exists() {
-            let file = File::open(&path)?;
-            let mut state: State = serde_json::from_reader(BufReader::new(&file))?;
+    pub async fn new(version: &str, config: Config) -> Result<State> {
+        let config_path = config_path()?;
+        let legacy_subscription_path = get_sub_file()?;
+
+        // TODO This moves legacy file into new location. Remove this.
+        if legacy_subscription_path.exists() {
+            std::fs::rename(&legacy_subscription_path, &config_path)?;
+        }
+
+        if config_path.exists() {
+            let file = File::open(&config_path)?;
+            // Read the file into an internal struct that allows optionally missing fields
+            let parse_state: ParseState = serde_json::from_reader(BufReader::new(&file))?;
+
+            // Convert to our public state that has sensible default for non-present fields
+            let mut state: State = parse_state.into();
+
+            // Override version to the version currently running
             state.version = String::from(version);
-            // Check if a day has passed (86400 seconds) since last launch
-            if 86400
-                < Utc::now()
-                    .signed_duration_since(state.last_run_time)
-                    .num_seconds()
+
+            // Check if a day has passed since last launch
+            if 0 < Utc::now()
+                .signed_duration_since(state.last_run_time)
+                .num_days()
             {
-                let config = Config::new()?;
-                update_rss(client, &mut state, Some(config)).await?;
+                update_rss( &mut state, Some(config)).await?;
                 check_for_update(&state.version).await?;
             }
+
+            // Update last run time and persist config
             state.last_run_time = Utc::now();
-            state.save()?;
+
             Ok(state)
         } else {
-            writeln!(io::stdout().lock(), "Creating new file: {:?}", &path).ok();
+            writeln!(io::stdout().lock(), "Creating new file: {:?}", &config_path).ok();
             Ok(State {
                 version: String::from(version),
                 last_run_time: Utc::now(),
                 subscriptions: Vec::new(),
+                config,
+                client: reqwest::Client::new(),
             })
         }
     }
 
-    pub fn subscriptions(&self) -> &[Subscription] {
-        &self.subscriptions
-    }
-
-    pub fn subscriptions_mut(&mut self) -> &mut [Subscription] {
-        &mut self.subscriptions
-    }
-
     pub async fn subscribe(&mut self, url: &str) -> Result<()> {
         let mut set = HashSet::new();
-        for sub in self.subscriptions() {
+        for sub in &self.subscriptions {
             set.insert(sub.title.clone());
         }
         let resp = reqwest::get(url).await?.bytes().await?;
@@ -151,15 +211,6 @@ impl State {
                 num_episodes: podcast.episodes().len(),
             });
         }
-        self.save()
-    }
-
-    pub fn save(&self) -> Result<()> {
-        let mut path = get_sub_file()?;
-        path.set_extension("json.tmp");
-        let file = File::create(&path)?;
-        serde_json::to_writer(BufWriter::new(file), self)?;
-        fs::rename(&path, get_sub_file()?)?;
         Ok(())
     }
 }

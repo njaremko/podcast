@@ -20,7 +20,6 @@ mod arg_parser;
 mod command_handler;
 mod commands;
 mod download;
-mod migration_handler;
 mod parser;
 mod playback;
 mod structs;
@@ -34,22 +33,31 @@ const VERSION: &str = "0.16.0";
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Create
     utils::create_directories()?;
-    migration_handler::migrate()?;
-    let client = reqwest::Client::new();
-    let mut state = State::new(&client, VERSION).await?;
 
+    // Run CLI parser and get matches
     let mut app = parser::get_app(&VERSION);
     let matches = app.clone().get_matches();
+
+    // Has the user specified that they want the CLI to do minimal output?
     let is_quiet = matches.occurrences_of("quiet") != 0;
-    
+
+    // Load config file
     let config = Config::new()?;
     if !config.quiet.unwrap_or(false) && !is_quiet {
         let path = utils::get_podcast_dir()?;
         writeln!(std::io::stdout().lock(), "Using PODCAST dir: {:?}", &path).ok();
     }
-    
-    
-    command_handler::handle_matches(&VERSION, &client, &mut state, config, &mut app, &matches).await?;
-    state.save()
+
+    // Instantiate the global state of the application
+    let mut state = State::new( VERSION, config).await?;
+
+    command_handler::handle_matches(&VERSION, &mut state, config, &mut app, &matches)
+        .await?;
+
+    let public_state: PublicState = state.into();
+    public_state.save()?;
+
+    Ok(())
 }

@@ -1,6 +1,6 @@
-use anyhow::Result;
 use crate::structs::*;
 use crate::utils::*;
+use anyhow::Result;
 
 use std::fs::{DirBuilder, File};
 use std::io::{self, BufReader, Read, Write};

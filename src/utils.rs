@@ -111,6 +111,12 @@ pub fn get_sub_file() -> Result<PathBuf> {
     Ok(path)
 }
 
+pub fn config_path() -> Result<PathBuf> {
+    let mut path = get_podcast_dir()?;
+    path.push(".subscriptions.json");
+    Ok(path)
+}
+
 pub fn get_xml_dir() -> Result<PathBuf> {
     let mut path = get_podcast_dir()?;
     path.push(".rss");

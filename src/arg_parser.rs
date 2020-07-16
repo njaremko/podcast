@@ -7,20 +7,23 @@ use std::path::Path;
 
 use crate::actions::*;
 use crate::download;
-use anyhow::Result;
 use crate::playback;
 use crate::structs::*;
+use anyhow::Result;
 
-pub async fn download(client: &reqwest::Client,state: &mut State, matches: &ArgMatches<'_>) -> Result<()> {
+pub async fn download(
+    state: &mut State,
+    matches: &ArgMatches<'_>,
+) -> Result<()> {
     let download_matches = matches.subcommand_matches("download").unwrap();
     let podcast = download_matches.value_of("PODCAST").unwrap();
     match download_matches.value_of("EPISODE") {
         Some(ep) => {
             if String::from(ep).contains(|c| c == '-' || c == ',') {
-                download::download_range(&client, &state, podcast, ep).await?
+                download::download_range( &state, podcast, ep).await?
             } else if download_matches.occurrences_of("name") > 0 {
                 download::download_episode_by_name(
-                    &client,
+                    
                     &state,
                     podcast,
                     ep,
@@ -28,14 +31,14 @@ pub async fn download(client: &reqwest::Client,state: &mut State, matches: &ArgM
                 )
                 .await?
             } else {
-                download::download_episode_by_num(&client,&state, podcast, ep).await?
+                download::download_episode_by_num( &state, podcast, ep).await?
             }
         }
         None => match download_matches.value_of("latest") {
             Some(num_of_latest) => {
-                download::download_latest(&client,&state, podcast, num_of_latest.parse()?).await?
+                download::download_latest( &state, podcast, num_of_latest.parse()?).await?
             }
-            None => download::download_all(&client,&state, podcast).await?,
+            None => download::download_all( &state, podcast).await?,
         },
     }
     Ok(())
@@ -69,19 +72,24 @@ pub fn play(state: &mut State, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub async fn subscribe(client: &reqwest::Client,state: &mut State, config: Config, matches: &ArgMatches<'_>) -> Result<()> {
+pub async fn subscribe(
+    
+    state: &mut State,
+    config: Config,
+    matches: &ArgMatches<'_>,
+) -> Result<()> {
     let subscribe_matches = matches
         .subcommand_matches("sub")
         .or_else(|| matches.subcommand_matches("subscribe"))
         .unwrap();
     let url = subscribe_matches.value_of("URL").unwrap();
-    sub(client, state, config, url).await?;
+    sub( state, config, url).await?;
     Ok(())
 }
 
-async fn sub(client: &reqwest::Client,state: &mut State, config: Config, url: &str) -> Result<()> {
+async fn sub( state: &mut State, config: Config, url: &str) -> Result<()> {
     state.subscribe(url).await?;
-    download::download_rss(client, config, url).await?;
+    download::download_rss(state, config, url).await?;
     Ok(())
 }
 
@@ -109,7 +117,12 @@ pub fn complete(app: &mut App, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub async fn search(client: &reqwest::Client,state: &mut State, config: Config, matches: &ArgMatches<'_>) -> Result<()> {
+pub async fn search(
+    
+    state: &mut State,
+    config: Config,
+    matches: &ArgMatches<'_>,
+) -> Result<()> {
     let matches = matches.subcommand_matches("search").unwrap();
     let podcast = matches.value_of("PODCAST").unwrap();
     let resp = podcast_search::search(podcast).await?;
@@ -152,7 +165,7 @@ pub async fn search(client: &reqwest::Client,state: &mut State, config: Config, 
 
     let rss_resp = &resp.results[n];
     match &rss_resp.feed_url {
-        Some(r) => sub(client, state, config, &r).await?,
+        Some(r) => sub( state, config, &r).await?,
         None => eprintln!("Subscription failed. No url in API response."),
     }
 
