@@ -113,7 +113,7 @@ pub async fn search(state: &mut State, config: Config, matches: &ArgMatches<'_>)
     let matches = matches.subcommand_matches("search").unwrap();
     let podcast = matches.value_of("PODCAST").unwrap();
     let resp = search::search_for_podcast(podcast).await?;
-    if resp.found().is_empty() {
+    if resp.results.is_empty() {
         println!("No Results");
         return Ok(());
     }
@@ -121,8 +121,8 @@ pub async fn search(state: &mut State, config: Config, matches: &ArgMatches<'_>)
     {
         let stdout = io::stdout();
         let mut lock = stdout.lock();
-        for (i, r) in resp.found().iter().enumerate() {
-            writeln!(&mut lock, "({}) {}", i, r)?;
+        for (i, r) in resp.results.iter().enumerate() {
+            writeln!(&mut lock, "({}) {}", i, r.collection_name.clone().unwrap_or_else(|| "".to_string()))?;
         }
     }
 
@@ -139,18 +139,14 @@ pub async fn search(state: &mut State, config: Config, matches: &ArgMatches<'_>)
     let mut num_input = String::new();
     io::stdin().read_line(&mut num_input)?;
     let n: usize = num_input.trim().parse()?;
-    if n > resp.found().len() {
+    if n > resp.results.len() {
         eprintln!("Invalid!");
         return Ok(());
     }
 
-    let rss_resp = search::retrieve_rss(&resp.found()[n]).await?;
-    if let Some(err) = rss_resp.error() {
-        eprintln!("{}", err);
-        return Ok(());
-    }
-    match rss_resp.url() {
-        Some(r) => sub(state, config, r).await?,
+    let rss_resp = &resp.results[n];
+    match &rss_resp.feed_url {
+        Some(r) => sub(state, config, &r).await?,
         None => eprintln!("Subscription failed. No url in API response."),
     }
 
