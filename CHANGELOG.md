@@ -1,3 +1,6 @@
+0.16.0
+- Refactor podcast searching logic into it's own library: [podcast_search](https://crates.io/crates/podcast_search)
+
 0.15.0
 - Proper podcast searching through iTunes API
 
