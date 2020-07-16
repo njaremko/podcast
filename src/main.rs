@@ -46,13 +46,18 @@ async fn main() -> Result<()> {
     migration_handler::migrate()?;
     let client = reqwest::Client::new();
     let mut state = State::new(&client, VERSION).await?;
+
+    let mut app = parser::get_app(&VERSION);
+    let matches = app.clone().get_matches();
+    let is_quiet = matches.occurrences_of("quiet") != 0;
+    
     let config = Config::new()?;
-    if !config.quiet.unwrap_or(false) {
+    if !config.quiet.unwrap_or(false) && !is_quiet {
         let path = utils::get_podcast_dir()?;
         writeln!(std::io::stdout().lock(), "Using PODCAST dir: {:?}", &path).ok();
     }
-    let mut app = parser::get_app(&VERSION);
-    let matches = app.clone().get_matches();
+    
+    
     command_handler::handle_matches(&VERSION, &client, &mut state, config, &mut app, &matches).await?;
     state.save()
 }

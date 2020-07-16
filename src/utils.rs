@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::env;
 use std::fs::{self, DirBuilder, File};
-use std::io::{self, BufReader, Write};
+use std::io::{BufReader, Write};
 use std::path::PathBuf;
 
 use crate::errors::*;
