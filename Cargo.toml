@@ -22,7 +22,6 @@ name = "podcast"
 chrono = { version = "0.4", features = ["serde"] }
 clap = "2.33"
 dirs = "3.0"
-failure = "0.1"
 lazy_static = "1.4"
 futures = "0.3"
 rayon = "1.3"
@@ -39,3 +38,5 @@ semver-parser = "0.9.0"
 tokio = { version = "0.2", features = ["full"]}
 podcast_search = "0.2"
 indicatif = "0.15.0"
+anyhow = "1.0"
+thiserror = "1.0"

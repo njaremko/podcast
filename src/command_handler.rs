@@ -3,8 +3,8 @@ use clap::{App, ArgMatches};
 use crate::actions::*;
 use crate::arg_parser;
 use crate::commands;
-use crate::errors::*;
 use crate::structs::*;
+use anyhow::Result;
 
 pub fn parse_sub_command(matches: &ArgMatches) -> commands::Command {
     match matches.subcommand_name() {

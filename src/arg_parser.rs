@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::actions::*;
 use crate::download;
-use crate::errors::*;
+use anyhow::Result;
 use crate::playback;
 use crate::structs::*;
 

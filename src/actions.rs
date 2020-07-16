@@ -1,5 +1,5 @@
 use crate::download;
-use crate::errors::*;
+use anyhow::Result;
 use crate::structs::*;
 use crate::utils;
 

@@ -3,8 +3,6 @@ extern crate clap;
 extern crate dirs;
 #[allow(unused_imports)]
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate lazy_static;
 extern crate rayon;
 extern crate regex;
@@ -28,14 +26,8 @@ mod playback;
 mod structs;
 mod utils;
 
-mod errors {
-    use failure::Error;
-    use std::result;
-    pub type Result<T> = result::Result<T, Error>;
-}
-
 use self::structs::*;
-use errors::Result;
+use anyhow::Result;
 use std::io::Write;
 
 const VERSION: &str = "0.16.0";

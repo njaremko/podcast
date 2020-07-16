@@ -4,7 +4,7 @@ use std::fs::{self, DirBuilder, File};
 use std::io::{BufReader, Write};
 use std::path::PathBuf;
 
-use crate::errors::*;
+use anyhow::Result;
 use dirs;
 use reqwest;
 use rss::Channel;
