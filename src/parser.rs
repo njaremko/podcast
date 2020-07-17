@@ -104,13 +104,8 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                     Arg::with_name("PODCAST")
                         .help("Regex for subscribed podcast")
                         .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::with_name("EPISODE")
-                        .help("Episode index")
-                        .required(false)
-                        .index(2),
+                        .index(1)
+                        .multiple(true),
                 ),
         )
         .subcommand(

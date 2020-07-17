@@ -16,10 +16,9 @@ extern crate serde_yaml;
 extern crate toml;
 
 mod actions;
-mod arg_parser;
-mod command_handler;
-mod commands;
+mod command;
 mod download;
+mod executor;
 mod parser;
 mod playback;
 mod structs;
@@ -27,37 +26,42 @@ mod utils;
 
 use self::structs::*;
 use anyhow::Result;
+use command::*;
 use std::io::Write;
 
-const VERSION: &str = "0.16.0";
+const VERSION: &str = "0.17.0";
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Create
-    utils::create_directories()?;
+fn main() -> Result<()> {
+    smol::run(async {
+        // Create
+        utils::create_directories()?;
 
-    // Run CLI parser and get matches
-    let mut app = parser::get_app(&VERSION);
-    let matches = app.clone().get_matches();
+        // Run CLI parser and get matches
+        let app = parser::get_app(&VERSION);
+        let matches = app.clone().get_matches();
 
-    // Has the user specified that they want the CLI to do minimal output?
-    let is_quiet = matches.occurrences_of("quiet") != 0;
+        // Has the user specified that they want the CLI to do minimal output?
+        let is_quiet = matches.occurrences_of("quiet") != 0;
 
-    // Load config file
-    let config = Config::new()?;
-    if !config.quiet.unwrap_or(false) && !is_quiet {
-        let path = utils::get_podcast_dir()?;
-        writeln!(std::io::stdout().lock(), "Using PODCAST dir: {:?}", &path).ok();
-    }
+        // Load config file
+        let config = Config::load()?.unwrap_or_default();
+        if !config.quiet.unwrap_or(false) && !is_quiet {
+            let path = utils::get_podcast_dir()?;
+            writeln!(std::io::stdout().lock(), "Using PODCAST dir: {:?}", &path).ok();
+        }
 
-    // Instantiate the global state of the application
-    let mut state = State::new( VERSION, config).await?;
+        // Instantiate the global state of the application
+        let state = State::new(VERSION, config).await?;
 
-    command_handler::handle_matches(&VERSION, &mut state, config, &mut app, &matches)
-        .await?;
+        // Parse the state and provided arguments into a command to be run
+        let command = parse_command(state, app, matches);
 
-    let public_state: PublicState = state.into();
-    public_state.save()?;
+        // After running the given command, we return a new state to persist
+        let new_state = run_command(command).await?;
 
-    Ok(())
+        // Persist new state
+        let public_state: PublicState = new_state.into();
+        public_state.save()?;
+        Ok(())
+    })
 }

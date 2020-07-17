@@ -2,7 +2,7 @@ use crate::structs::*;
 use crate::utils::*;
 use anyhow::Result;
 
-use std::fs::{DirBuilder, File};
+use std::fs::File;
 use std::io::{self, BufReader, Read, Write};
 use std::process::Command;
 
@@ -49,7 +49,6 @@ fn launch_vlc(url: &str) -> Result<()> {
 pub fn play_latest(state: &State, p_search: &str) -> Result<()> {
     let re_pod: Regex = Regex::new(&format!("(?i){}", &p_search))?;
     let mut path: PathBuf = get_xml_dir()?;
-    DirBuilder::new().recursive(true).create(&path)?;
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let mut filename: String = subscription.title.clone();
@@ -81,18 +80,6 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
     let re_pod: Regex = Regex::new(&format!("(?i){}", &p_search))?;
     if let Ok(ep_num) = ep_num_string.parse::<usize>() {
         let mut path: PathBuf = get_xml_dir()?;
-        let stderr = io::stderr();
-        let mut handle = stderr.lock();
-        if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
-            writeln!(
-                &mut handle,
-                "Couldn't create directory: {}\nReason: {}",
-                path.to_str().unwrap(),
-                err
-            )
-            .ok();
-            return Ok(());
-        }
         for subscription in &state.subscriptions {
             if re_pod.is_match(&subscription.title) {
                 let mut filename: String = subscription.title.clone();
@@ -119,8 +106,8 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
         }
     } else {
         {
-            let stdout = io::stdout();
-            let mut handle = stdout.lock();
+            let stderr = io::stderr();
+            let mut handle = stderr.lock();
             writeln!(&mut handle, "Failed to parse episode index number...").ok();
             writeln!(&mut handle, "Attempting to find episode by name...").ok();
         }
@@ -132,17 +119,6 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
 pub fn play_episode_by_name(state: &State, p_search: &str, ep_string: &str) -> Result<()> {
     let re_pod: Regex = Regex::new(&format!("(?i){}", &p_search))?;
     let mut path: PathBuf = get_xml_dir()?;
-    if let Err(err) = DirBuilder::new().recursive(true).create(&path) {
-        let stderr = io::stderr();
-        let mut handle = stderr.lock();
-        writeln!(
-            &mut handle,
-            "Couldn't create directory: {:?}\nReason: {}",
-            path, err
-        )
-        .ok();
-        return Ok(());
-    }
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let mut filename: String = subscription.title.clone();

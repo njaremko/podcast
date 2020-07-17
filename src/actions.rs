@@ -9,17 +9,15 @@ use std::io::{self, BufReader, BufWriter, Write};
 
 use clap::App;
 use clap::Shell;
+use download::download_episodes;
 use regex::Regex;
 use reqwest;
 use rss::Channel;
-use semver_parser::version;
 use std::path::PathBuf;
-use toml;
 
 pub fn list_episodes(search: &str) -> Result<()> {
     let re = Regex::new(&format!("(?i){}", &search))?;
     let path = utils::get_xml_dir()?;
-    utils::create_dir_if_not_exist(&path)?;
 
     for entry in fs::read_dir(&path)? {
         let entry = entry?;
@@ -50,10 +48,10 @@ pub fn list_episodes(search: &str) -> Result<()> {
 }
 
 pub async fn update_subscription(
-    client: &reqwest::Client,
+    state: &State,
     index: usize,
     sub: &Subscription,
-    config: Option<Config>,
+    config: &Config,
 ) -> Result<[usize; 2]> {
     println!("Updating {}", sub.title);
     let mut path: PathBuf = utils::get_podcast_dir()?;
@@ -79,62 +77,26 @@ pub async fn update_subscription(
     (*podcast).write_to(BufWriter::new(file))?;
 
     if sub.num_episodes < podcast.episodes().len() {
-        let mut d_vec = vec![];
-        let subscription_limit = config
-            .unwrap_or_else(|| Config::default())
-            .download_subscription_limit
-            .unwrap_or(-1);
-        let mut episodes =
-            podcast.episodes()[..podcast.episodes().len() - sub.num_episodes].to_vec();
-        episodes.reverse();
+        let subscription_limit = config.download_subscription_limit.unwrap_or(-1);
+        let episodes = podcast.episodes()[..podcast.episodes().len() - sub.num_episodes].to_vec();
+
+        let mut to_download = vec![];
         if 0 < subscription_limit {
-            for ep in episodes.iter().take(subscription_limit as usize) {
-                d_vec.push(download::download(
-                    client,
-                    podcast.title().into(),
-                    ep.clone(),
-                ));
+            for ep in episodes.iter().rev().take(subscription_limit as usize) {
+                if let Some(episode) = Download::new(&state, &podcast, &ep).await? {
+                    to_download.push(episode)
+                }
             }
         } else {
             for ep in episodes.iter() {
-                d_vec.push(download::download(
-                    client,
-                    podcast.title().into(),
-                    ep.clone(),
-                ));
+                if let Some(episode) = Download::new(&state, &podcast, &ep).await? {
+                    to_download.push(episode)
+                }
             }
         }
-        for c in futures::future::join_all(d_vec).await.iter() {
-            if let Err(err) = c {
-                println!("Error: {}", err);
-            }
-        }
+        download_episodes(to_download).await?;
     }
     Ok([index, podcast.episodes().len()])
-}
-
-pub async fn update_rss(
-    state: &mut State,
-    config: Option<Config>,
-) -> Result<()> {
-    println!("Checking for new episodes...");
-    let mut d_vec = vec![];
-    for (index, sub ) in state.subscriptions.iter().enumerate() {
-        d_vec.push(update_subscription(&state.client, index, sub, config));
-    }
-    let new_subscriptions = futures::future::join_all(d_vec).await;
-    for c in &new_subscriptions {
-        match c {
-            Ok([index, new_ep_count]) => {
-                state.subscriptions[*index].num_episodes = *new_ep_count;
-            },
-            Err(err) => {
-                println!("Error: {}", err);
-            }
-        }
-    }
-    println!("Done.");
-    Ok(())
 }
 
 pub fn list_subscriptions(state: &State) -> Result<()> {
@@ -142,56 +104,6 @@ pub fn list_subscriptions(state: &State) -> Result<()> {
     let mut handle = stdout.lock();
     for subscription in &state.subscriptions {
         writeln!(&mut handle, "{}", subscription.title())?;
-    }
-    Ok(())
-}
-
-pub async fn check_for_update(version: &str) -> Result<()> {
-    println!("Checking for updates...");
-    let resp: String =
-        reqwest::get("https://raw.githubusercontent.com/njaremko/podcast/master/Cargo.toml")
-            .await?
-            .text()
-            .await?;
-
-    let config = resp.parse::<toml::Value>()?;
-    let latest = config["package"]["version"]
-        .as_str()
-        .unwrap_or_else(|| panic!("Cargo.toml didn't have a version {:?}", config));
-    let local_version = match version::parse(&version) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("Failed to parse version {}: {}", &version, e);
-            return Ok(());
-        }
-    };
-    let remote_version = match version::parse(&latest) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("Failed to parse version {}: {}", &version, e);
-            return Ok(());
-        }
-    };
-    if local_version < remote_version {
-        println!("New version available: {} -> {}", version, latest);
-    }
-    Ok(())
-}
-
-pub fn remove_podcast(state: &mut State, p_search: &str) -> Result<()> {
-    if p_search == "*" {
-        state.subscriptions = vec![];
-        return utils::delete_all();
-    }
-
-    let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
-
-    for subscription in 0..state.subscriptions.len() {
-        let title = state.subscriptions[subscription].title.clone();
-        if re_pod.is_match(&title) {
-            state.subscriptions.remove(subscription);
-            utils::delete(&title)?;
-        }
     }
     Ok(())
 }

@@ -3,15 +3,18 @@ use super::utils::*;
 use anyhow::Result;
 use core::ops::Deref;
 
-use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Write};
 
+use crate::{download, utils};
+use bloom::ASMS;
 use chrono::prelude::*;
 use regex::Regex;
+use reqwest::header;
 use rss::{Channel, Item};
+use semver_parser::version;
 use serde_json;
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
 #[cfg(target_os = "macos")]
 const ESCAPE_REGEX: &str = r"/";
@@ -24,60 +27,38 @@ lazy_static! {
     static ref FILENAME_ESCAPE: Regex = Regex::new(ESCAPE_REGEX).unwrap();
 }
 
-fn create_new_config_file(path: &PathBuf) -> Result<Config> {
-    writeln!(
-        io::stdout().lock(),
-        "Creating new config file at {:?}",
-        &path
-    )
-    .ok();
-    let file = File::create(&path)?;
-    let config = Config {
-        auto_download_limit: Some(1),
-        download_subscription_limit: Some(1),
-        quiet: Some(false),
-    };
-    serde_yaml::to_writer(file, &config)?;
-    Ok(config)
-}
-
-#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// This information is persisted to disk as part of PublicState
+/// and allows for configuration of the CLI
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
     pub auto_download_limit: Option<i64>,
     pub download_subscription_limit: Option<i64>,
     pub quiet: Option<bool>,
 }
 
-impl Config {
-    pub fn new() -> Result<Config> {
-        let mut path = get_podcast_dir()?;
-        path.push(".config.yaml");
-        let config = if path.exists() {
-            let file = File::open(&path)?;
-            match serde_yaml::from_reader(file) {
-                Ok(config) => config,
-                Err(err) => {
-                    let mut new_path = path.clone();
-                    new_path.set_extension("yaml.bk");
-                    let stderr = io::stderr();
-                    let mut handle = stderr.lock();
-                    writeln!(
-                        &mut handle,
-                        "{}\nFailed to open config file, moving to {:?}",
-                        err, &new_path
-                    )
-                    .ok();
-                    fs::rename(&path, new_path)?;
-                    create_new_config_file(&path)?
-                }
-            }
-        } else {
-            create_new_config_file(&path)?
-        };
-        Ok(config)
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            auto_download_limit: Some(1),
+            download_subscription_limit: Some(1),
+            quiet: Some(false),
+        }
     }
 }
 
+impl Config {
+    pub fn load() -> Result<Option<Config>> {
+        let mut path = get_podcast_dir()?;
+        path.push(".config.yaml");
+        if path.exists() {
+            let file = File::open(&path)?;
+            return Ok(Some(serde_yaml::from_reader(file)?));
+        }
+        Ok(None)
+    }
+}
+
+/// This is persisted to disk and represents each subscription and it's last known state
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Subscription {
     pub title: String,
@@ -91,6 +72,7 @@ impl Subscription {
     }
 }
 
+/// This struct is what is serialized to disk
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PublicState {
     pub version: String,
@@ -121,6 +103,7 @@ impl PublicState {
     }
 }
 
+/// Internal state across the application, cannot be serialized
 #[derive(Clone, Debug)]
 pub struct State {
     pub version: String,
@@ -130,6 +113,8 @@ pub struct State {
     pub client: reqwest::Client,
 }
 
+/// Struct used to parse state from disk, handles missing
+/// configuration and populates with sensible defaults
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct ParseState {
     version: Option<String>,
@@ -176,8 +161,8 @@ impl State {
                 .signed_duration_since(state.last_run_time)
                 .num_days()
             {
-                update_rss( &mut state, Some(config)).await?;
-                check_for_update(&state.version).await?;
+                state.update_rss().await?;
+                state.check_for_update().await?;
             }
 
             // Update last run time and persist config
@@ -197,21 +182,127 @@ impl State {
     }
 
     pub async fn subscribe(&mut self, url: &str) -> Result<()> {
-        let mut set = HashSet::new();
+        // Make a bloom filter and populate it with subscription titles
+        let mut bloom_filter = bloom::BloomFilter::with_rate(0.1, self.subscriptions.len() as u32);
         for sub in &self.subscriptions {
-            set.insert(sub.title.clone());
+            bloom_filter.insert(&sub.title);
         }
+
+        // Fetch provided podcast RSS feed
         let resp = reqwest::get(url).await?.bytes().await?;
+
+        // Parse the response into a podcast struct
         let channel = Channel::read_from(BufReader::new(&resp[..]))?;
         let podcast = Podcast::from(channel);
-        if !set.contains(podcast.title()) {
+
+        // Check if the podcast already exists in our subscriptions
+        if !bloom_filter.contains(&podcast.title()) {
             self.subscriptions.push(Subscription {
                 title: String::from(podcast.title()),
                 url: String::from(url),
                 num_episodes: podcast.episodes().len(),
             });
         }
+        download::download_rss(self, url).await?;
         Ok(())
+    }
+
+    pub async fn update_rss(&mut self) -> Result<()> {
+        println!("Checking for new episodes...");
+        let mut d_vec = vec![];
+        for (index, sub) in self.subscriptions.iter().enumerate() {
+            d_vec.push(update_subscription(&self, index, sub, &self.config));
+        }
+        let new_subscriptions = futures::future::join_all(d_vec).await;
+        for c in &new_subscriptions {
+            match c {
+                Ok([index, new_ep_count]) => {
+                    self.subscriptions[*index].num_episodes = *new_ep_count;
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                }
+            }
+        }
+        println!("Done.");
+        Ok(())
+    }
+
+    pub async fn check_for_update(&self) -> Result<()> {
+        println!("Checking for updates...");
+        let resp: String =
+            reqwest::get("https://raw.githubusercontent.com/njaremko/podcast/master/Cargo.toml")
+                .await?
+                .text()
+                .await?;
+
+        let config = resp.parse::<toml::Value>()?;
+        let latest = config["package"]["version"]
+            .as_str()
+            .unwrap_or_else(|| panic!("Cargo.toml didn't have a version {:?}", config));
+        let local_version = match version::parse(&self.version) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Failed to parse version {}: {}", &self.version, e);
+                return Ok(());
+            }
+        };
+        let remote_version = match version::parse(&latest) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Failed to parse version {}: {}", &self.version, e);
+                return Ok(());
+            }
+        };
+        if local_version < remote_version {
+            println!("New version available: {} -> {}", &self.version, latest);
+        }
+        Ok(())
+    }
+}
+
+/// Represent an intention to download a file
+#[derive(Clone, Debug, PartialEq)]
+pub struct Download {
+    pub title: String,
+    pub path: PathBuf,
+    pub url: String,
+    pub size: u64,
+}
+
+impl Download {
+    pub async fn new(
+        state: &State,
+        podcast: &Podcast,
+        episode: &Episode,
+    ) -> Result<Option<Download>> {
+        let mut path = utils::get_podcast_dir()?;
+        path.push(podcast.title());
+        utils::create_dir_if_not_exist(&path)?;
+        if let (Some(mut title), Some(url)) = (episode.title(), episode.url()) {
+            if let Some(ext) = episode.extension() {
+                title = utils::append_extension(&title, &ext);
+            }
+            path.push(&title);
+
+            let head_resp = state.client.head(url).send().await?;
+            let total_size = head_resp
+                .headers()
+                .get(header::CONTENT_LENGTH)
+                .and_then(|ct_len| ct_len.to_str().ok())
+                .and_then(|ct_len| ct_len.parse().ok())
+                .unwrap_or(0);
+
+            if !path.exists() {
+                return Ok(Some(Download {
+                    title,
+                    path,
+                    url: url.into(),
+                    size: total_size,
+                }));
+            }
+        }
+        Ok(None)
     }
 }
 

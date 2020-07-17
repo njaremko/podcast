@@ -120,6 +120,7 @@ pub fn config_path() -> Result<PathBuf> {
 pub fn get_xml_dir() -> Result<PathBuf> {
     let mut path = get_podcast_dir()?;
     path.push(".rss");
+    create_dir_if_not_exist(&path)?;
     Ok(path)
 }
 

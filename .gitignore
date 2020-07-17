@@ -3,3 +3,4 @@
 /rls/
 **/*.rs.bk
 *.lock
+*.mp3
