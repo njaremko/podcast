@@ -1,19 +1,8 @@
-extern crate chrono;
-extern crate clap;
-extern crate dirs;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate lazy_static;
-extern crate rayon;
-extern crate regex;
-extern crate reqwest;
-extern crate rss;
 #[macro_use]
-extern crate serde_derive;
-extern crate percent_encoding;
-extern crate serde_json;
-extern crate serde_yaml;
-extern crate toml;
+extern crate serde;
 
 mod actions;
 mod command;
