@@ -110,7 +110,11 @@ pub fn remove(mut state: State, matches: &ArgMatches) -> Result<State> {
 
     let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
 
-    if let Some(index) = state.subscriptions.iter().position(|sub| re_pod.is_match(sub.title())) {
+    if let Some(index) = state
+        .subscriptions
+        .iter()
+        .position(|sub| re_pod.is_match(sub.title()))
+    {
         let title = state.subscriptions[index].title().to_owned();
         state.subscriptions.remove(index);
         utils::delete(&title)?;

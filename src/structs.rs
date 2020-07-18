@@ -97,7 +97,7 @@ impl PublicState {
         let mut path = config_path()?;
         path.set_extension("json.tmp");
         let file = File::create(&path)?;
-        serde_json::to_writer(BufWriter::new(file), self)?;
+        serde_json::to_writer_pretty(BufWriter::new(file), self)?;
         fs::rename(&path, config_path()?)?;
         Ok(())
     }

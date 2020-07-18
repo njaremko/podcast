@@ -14,7 +14,9 @@ use reqwest::{self, header};
 ///
 /// Not to be used in conjunction with download_multiple_episodes
 async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
-    pb.set_message(&format!("Downloading {}", &episode.title));
+    let mut title = episode.title.to_owned();
+    title.truncate(40);
+    pb.set_message(&title);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[{eta_precise}] {msg} [{bytes_per_sec}] [{bytes}/{total_bytes}]"),
@@ -47,9 +49,12 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
 async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) -> Result<()> {
     let client = reqwest::Client::new();
     for (index, episode) in episodes.iter().enumerate() {
+        let mut title = episode.title.to_owned();
+        title.truncate(40);
+
         pb.set_position(0);
         pb.set_length(episode.size);
-        pb.set_message(&format!("Downloading {}", &episode.title));
+        pb.set_message(&title);
         pb.set_style(ProgressStyle::default_bar().template(
             &(format!("[{}/{}]", index, episodes.len())
                 + " [{eta_precise}] {msg} [{bytes_per_sec}] [{bytes}/{total_bytes}]"),

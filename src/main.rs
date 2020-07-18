@@ -16,12 +16,23 @@ mod utils;
 use self::structs::*;
 use anyhow::Result;
 use command::*;
+use futures::future;
 use std::io::Write;
+use std::thread;
 
 const VERSION: &str = "0.17.2";
 
 fn main() -> Result<()> {
-    smol::run(async {
+    // Same number of threads as there are CPU cores.
+    let num_threads = num_cpus::get().max(1);
+
+    // Run the thread-local and work-stealing executor on a thread pool.
+    for _ in 0..num_threads {
+        // A pending future is one that simply yields forever.
+        thread::spawn(|| smol::run(future::pending::<()>()));
+    }
+
+    smol::block_on(async {
         // Create
         utils::create_directories()?;
 
