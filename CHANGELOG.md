@@ -1,3 +1,20 @@
+0.17.2
+- Fix unsubscribe throwing an error if you unsubscribed from the last subscription in the list
+
+0.17.1
+- Fix running just `podcast` causing a panic
+- Fix auto-download when subscribing subscribing to a podcast
+
+0.17.0
+- Search is improved to handle spaces without quotes
+podcast search my brother will correctly return My Brother My Brother And Me
+- Podcast downloading has been significantly improved
+    - We now show you download progress in a subjectively prettier manner
+    - Downloads are optimally distributed across threads
+    - We take advantage of keep-alive connection pooling if possible
+- Fixed the --quiet option not being parsed correctly
+- Fairly significant work towards cleaning up the code base, and making everything more readable. More to come.
+
 0.16.0
 - Refactor podcast searching logic into it's own library: [podcast_search](https://crates.io/crates/podcast_search)
 
