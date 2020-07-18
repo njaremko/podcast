@@ -29,7 +29,7 @@ use anyhow::Result;
 use command::*;
 use std::io::Write;
 
-const VERSION: &str = "0.17.0";
+const VERSION: &str = "0.17.1";
 
 fn main() -> Result<()> {
     smol::run(async {

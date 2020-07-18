@@ -203,7 +203,8 @@ impl State {
                 num_episodes: podcast.episodes().len(),
             });
         }
-        download::download_rss(self, url).await?;
+        let episodes = download::download_rss(self, url).await?;
+        download::download_episodes(episodes).await?;
         Ok(())
     }
 

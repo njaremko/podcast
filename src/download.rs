@@ -80,6 +80,10 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
 
 /// Splits the given list optimally across available threads and downloads them pretty
 pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
+    if episodes.is_empty() {
+        return Ok(());
+    }
+
     let mp = MultiProgress::new();
     let num_cpus = num_cpus::get();
     if episodes.len() < num_cpus {

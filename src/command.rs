@@ -12,10 +12,11 @@ pub enum Command<'a> {
     Complete(State, App<'a, 'a>, ArgMatches<'a>),
     Refresh(State),
     Update(State),
-    NoMatch,
+    NoMatch(State),
 }
 
 pub fn parse_command<'a>(state: State, app: App<'a, 'a>, matches: ArgMatches<'a>) -> Command<'a> {
+    let state_copy = state.clone();
     matches
         .subcommand_name()
         .map(|command| match command {
@@ -51,9 +52,9 @@ pub fn parse_command<'a>(state: State, app: App<'a, 'a>, matches: ArgMatches<'a>
             ),
             "refresh" => Command::Refresh(state),
             "update" => Command::Update(state),
-            _ => Command::NoMatch,
+            _ => Command::NoMatch(state),
         })
-        .unwrap_or(Command::NoMatch)
+        .unwrap_or_else(|| Command::NoMatch(state_copy))
 }
 
 pub async fn run_command<'a>(command: Command<'a>) -> Result<State> {
@@ -76,6 +77,6 @@ pub async fn run_command<'a>(command: Command<'a>) -> Result<State> {
             state.check_for_update().await?;
             Ok(state)
         }
-        _ => panic!(),
+        Command::NoMatch(state) => Ok(state),
     }
 }
