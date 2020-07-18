@@ -69,7 +69,7 @@ pub fn delete(title: &str) -> Result<()> {
     path.push(filename);
     println!("Removing '{}' from subscriptions...", &title);
     println!("{}", UNSUBSCRIBE_NOTE);
-    fs::remove_file(path)?;
+    fs::remove_file(path).ok();
     Ok(())
 }
 
