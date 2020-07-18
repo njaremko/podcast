@@ -14,8 +14,7 @@ use reqwest::{self, header};
 ///
 /// Not to be used in conjunction with download_multiple_episodes
 async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
-    let mut title = episode.title.to_owned();
-    title.truncate(40);
+    let title = truncate_title(&episode.title);
     pb.set_message(&title);
     pb.set_style(
         ProgressStyle::default_bar()
@@ -45,12 +44,27 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
     Ok(())
 }
 
+fn truncate_title(title: &str) -> String {
+    let fix_char_len = 45;
+    let mut title = title.to_owned();
+    if let Some((w, _)) = term_size::dimensions() {
+        if fix_char_len < w {
+            let new_width = w - fix_char_len;
+            title.truncate(new_width);
+        } else {
+            title.truncate(10)
+        }
+    } else {
+        title.truncate(40);
+    }
+    title
+}
+
 /// Handles downloading a list of episodes on a single thread
 async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) -> Result<()> {
     let client = reqwest::Client::new();
     for (index, episode) in episodes.iter().enumerate() {
-        let mut title = episode.title.to_owned();
-        title.truncate(40);
+        let title = truncate_title(&episode.title);
 
         pb.set_position(0);
         pb.set_length(episode.size);
@@ -92,7 +106,6 @@ pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
     let mp = MultiProgress::new();
     let num_cpus = num_cpus::get();
     if episodes.len() < num_cpus {
-        println!("Starting {} download threads...", episodes.len());
         for episode in episodes.to_owned() {
             let pb = mp.add(ProgressBar::new(episode.size));
             std::thread::spawn(move || smol::block_on(download_episode(pb, episode)));
@@ -100,8 +113,6 @@ pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
         mp.join_and_clear()?;
         return Ok(());
     }
-
-    println!("Starting {} download threads...", &num_cpus);
 
     let chunk_size = episodes.len() / num_cpus;
     for chunk in episodes.chunks(chunk_size) {

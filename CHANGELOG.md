@@ -1,3 +1,6 @@
+0.17.3
+- Improve layout of download progress bar for small terminal widths
+
 0.17.2
 - Fix unsubscribe throwing an error if you unsubscribed from the last subscription in the list
 
