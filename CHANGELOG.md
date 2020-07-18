@@ -1,3 +1,6 @@
+0.17.4
+- Make download progress bar layout dynamic as terminal size changes
+
 0.17.3
 - Improve layout of download progress bar for small terminal widths
 

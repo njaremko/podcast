@@ -38,6 +38,8 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
     while let Some(chunk) = download.chunk().await? {
         let written = dest.write(&chunk).await?;
         pb.inc(written as u64);
+        let title = truncate_title(&episode.title);
+        pb.set_message(&title);
     }
     dest.flush().await?;
     pb.finish_with_message("Done");
@@ -90,6 +92,8 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
         while let Some(chunk) = download.chunk().await? {
             let written = dest.write(&chunk).await?;
             pb.inc(written as u64);
+            let title = truncate_title(&episode.title);
+            pb.set_message(&title);
         }
         dest.flush().await?;
     }
