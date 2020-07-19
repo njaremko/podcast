@@ -20,7 +20,7 @@ use futures::future;
 use std::io::Write;
 use std::thread;
 
-const VERSION: &str = "0.17.4";
+const VERSION: &str = "0.17.5";
 
 fn main() -> Result<()> {
     // Same number of threads as there are CPU cores.
