@@ -100,5 +100,5 @@ Building requires nightly rust
 ```sh
 git clone git@github.com:njaremko/podcast.git
 cd podcast
-cargo install --path=.
+cargo install --path=. --force
 ```
