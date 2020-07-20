@@ -183,7 +183,13 @@ impl State {
 
     pub async fn subscribe(&mut self, url: &str) -> Result<()> {
         // Make a bloom filter and populate it with subscription titles
-        let mut bloom_filter = bloom::BloomFilter::with_rate(0.1, self.subscriptions.len() as u32);
+        let existing_subscriptions = if self.subscriptions.is_empty() {
+            10
+        } else {
+            self.subscriptions.len()
+        };
+
+        let mut bloom_filter = bloom::BloomFilter::with_rate(0.1, existing_subscriptions as u32);
         for sub in &self.subscriptions {
             bloom_filter.insert(&sub.title);
         }
