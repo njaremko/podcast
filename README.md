@@ -24,7 +24,7 @@ It currently supports:
 
 By default, podcasts are downloaded to `$HOME/Podcasts`, but this folder can be set with the `$PODCAST` environmental variable.
 
-How many latest episodes to download when first subscibing to new podcasts can be set in the `$PODCAST/.subscriptions.json` file
+How many latest episodes to download when first subscribing to new podcasts can be set in the `$PODCAST/.subscriptions.json` file
 
 Downloads can be done a variety of ways:
 
