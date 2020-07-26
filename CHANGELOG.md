@@ -1,3 +1,6 @@
+UNRELEASED
+- Check for new release before checking for new podcast episodes
+
 0.17.4
 - Make download progress bar layout dynamic as terminal size changes
 

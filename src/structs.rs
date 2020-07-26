@@ -161,8 +161,8 @@ impl State {
                 .signed_duration_since(state.last_run_time)
                 .num_days()
             {
-                state.update_rss().await?;
                 state.check_for_update().await?;
+                state.update_rss().await?;
             }
 
             // Update last run time and persist config
