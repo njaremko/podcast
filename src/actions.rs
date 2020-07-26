@@ -3,6 +3,7 @@ use crate::structs::*;
 use crate::utils;
 use anyhow::Result;
 
+use futures::prelude::*;
 use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Write};
@@ -77,23 +78,33 @@ pub async fn update_subscription(
     (*podcast).write_to(BufWriter::new(file))?;
 
     if sub.num_episodes < podcast.episodes().len() {
-        let subscription_limit = config.download_subscription_limit.unwrap_or(-1);
         let episodes = podcast.episodes()[..podcast.episodes().len() - sub.num_episodes].to_vec();
+        let to_download = match config.download_subscription_limit {
+            Some(subscription_limit) => {
+                let download_futures = episodes
+                    .iter()
+                    .rev()
+                    .take(subscription_limit as usize)
+                    .map(|ep| Download::new(&state, &podcast, &ep));
 
-        let mut to_download = vec![];
-        if 0 < subscription_limit {
-            for ep in episodes.iter().rev().take(subscription_limit as usize) {
-                if let Some(episode) = Download::new(&state, &podcast, &ep).await? {
-                    to_download.push(episode)
-                }
+                stream::iter(download_futures)
+                    .filter_map(|download| async move { download.await.ok() })
+                    .filter_map(|d| async move { d })
+                    .collect::<Vec<Download>>()
+                    .await
             }
-        } else {
-            for ep in episodes.iter() {
-                if let Some(episode) = Download::new(&state, &podcast, &ep).await? {
-                    to_download.push(episode)
-                }
+            None => {
+                let download_futures = episodes
+                    .iter()
+                    .map(|ep| Download::new(&state, &podcast, &ep));
+
+                stream::iter(download_futures)
+                    .filter_map(|download| async move { download.await.ok() })
+                    .filter_map(|d| async move { d })
+                    .collect::<Vec<Download>>()
+                    .await
             }
-        }
+        };
         download_episodes(to_download).await?;
     }
     Ok([index, podcast.episodes().len()])
