@@ -19,7 +19,7 @@ fn launch_player(url: &str) -> Result<()> {
 
 fn launch_mpv(url: &str) -> Result<()> {
     if let Err(err) = Command::new("mpv")
-        .args(&["--audio-display=no", "--ytdl=no", url])
+        .args(&["--no-audio-display", "--ytdl=no", url])
         .status()
     {
         let stderr = io::stderr();

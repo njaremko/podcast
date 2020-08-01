@@ -3,6 +3,8 @@
 `podcast` is a command line podcast manager and player.
  
 Binaries can be found here: https://github.com/njaremko/podcast/releases
+
+Otherwise, install [rustup](https://rustup.rs/), then run `cargo install podcast`
  
 NOTE: Playback requires either mpv or vlc to be installed
  
