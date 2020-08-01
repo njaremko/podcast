@@ -1,6 +1,8 @@
+0.17.6
+- Fix mpv CLI argument to not show image popup
+
 0.17.5
 - Check for new release before checking for new podcast episodes
-- Fix mpv CLI argument to not show image popup
 
 0.17.4
 - Make download progress bar layout dynamic as terminal size changes
