@@ -15,7 +15,7 @@
 
 0.17.1
 - Fix running just `podcast` causing a panic
-- Fix auto-download when subscribing subscribing to a podcast
+- Fix auto-download when subscribing to a podcast
 
 0.17.0
 - Search is improved to handle spaces without quotes
