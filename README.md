@@ -28,6 +28,8 @@ By default, podcasts are downloaded to `$HOME/Podcasts`, but this folder can be 
 
 How many latest episodes to download when first subscribing to new podcasts can be set in the `$PODCAST/.subscriptions.json` file
 
+Set `auto_download_limit` to `0` to skip downloading when first subscribing.
+
 Downloads can be done a variety of ways:
 
 Individually: `podcast download $podcast_name 4`
