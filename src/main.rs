@@ -15,11 +15,11 @@ mod utils;
 
 use self::structs::*;
 use anyhow::Result;
+use async_compat::Compat;
 use command::*;
 use futures::future;
 use std::io::Write;
 use std::thread;
-use async_compat::Compat;
 
 const VERSION: &str = "0.18.0";
 

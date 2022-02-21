@@ -342,9 +342,7 @@ impl Podcast {
 
     #[allow(dead_code)]
     pub async fn from_url(url: &str) -> Result<Podcast> {
-        let content = reqwest::get(url).await?
-        .bytes()
-        .await?;
+        let content = reqwest::get(url).await?.bytes().await?;
         Ok(Podcast::from(Channel::read_from(&content[..])?))
     }
 

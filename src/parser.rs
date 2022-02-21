@@ -1,4 +1,4 @@
-use clap::{Command, Arg};
+use clap::{Arg, Command};
 
 pub fn get_app<'a, 'b>(version: &'a str) -> Command {
     Command::new("podcast")
@@ -52,22 +52,18 @@ pub fn get_app<'a, 'b>(version: &'a str) -> Command {
                 ),
         )
         .subcommand(
-            Command::new("ls")
-                .about("list episodes of podcast")
-                .arg(
-                    Arg::new("PODCAST")
-                        .help("Regex for subscribed podcast")
-                        .index(1),
-                ),
+            Command::new("ls").about("list episodes of podcast").arg(
+                Arg::new("PODCAST")
+                    .help("Regex for subscribed podcast")
+                    .index(1),
+            ),
         )
         .subcommand(
-            Command::new("list")
-                .about("list episodes of podcast")
-                .arg(
-                    Arg::new("PODCAST")
-                        .help("Regex for subscribed podcast")
-                        .index(1),
-                ),
+            Command::new("list").about("list episodes of podcast").arg(
+                Arg::new("PODCAST")
+                    .help("Regex for subscribed podcast")
+                    .index(1),
+            ),
         )
         .subcommand(
             Command::new("play")

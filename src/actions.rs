@@ -123,19 +123,19 @@ pub fn print_completion(app: &mut Command, arg: &str) {
     let command_name = "podcast";
     match arg {
         "zsh" => {
-            generate( Shell::Zsh, app, command_name, &mut io::stdout());
+            generate(Shell::Zsh, app, command_name, &mut io::stdout());
         }
         "bash" => {
-            generate( Shell::Bash, app, command_name, &mut io::stdout());
+            generate(Shell::Bash, app, command_name, &mut io::stdout());
         }
         "powershell" => {
-            generate( Shell::PowerShell, app, command_name, &mut io::stdout());
+            generate(Shell::PowerShell, app, command_name, &mut io::stdout());
         }
         "fish" => {
-            generate( Shell::Fish, app, command_name, &mut io::stdout());
+            generate(Shell::Fish, app, command_name, &mut io::stdout());
         }
         "elvish" => {
-            generate( Shell::Elvish, app, command_name, &mut io::stdout());
+            generate(Shell::Elvish, app, command_name, &mut io::stdout());
         }
         other => {
             println!("Completions are not available for {}", other);

@@ -32,7 +32,9 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
         smol::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&episode.path).await?);
+            .open(&episode.path)
+            .await?,
+    );
 
     let mut download = request.send().compat().await?;
     while let Some(chunk) = download.chunk().compat().await? {
@@ -81,10 +83,13 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
             request = request.header(header::RANGE, format!("bytes={}-", size));
             pb.inc(size);
         }
-        let mut dest = smol::io::BufWriter::new(smol::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&episode.path).await?);
+        let mut dest = smol::io::BufWriter::new(
+            smol::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&episode.path)
+                .await?,
+        );
 
         let mut download = request.send().await?;
         while let Some(chunk) = download.chunk().await? {

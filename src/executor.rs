@@ -1,4 +1,4 @@
-use clap::{Command, ArgMatches};
+use clap::{ArgMatches, Command};
 
 use std::env;
 

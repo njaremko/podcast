@@ -1,6 +1,6 @@
 use crate::{executor, structs::State};
 use anyhow::Result;
-use clap::{Command, ArgMatches};
+use clap::{ArgMatches, Command};
 
 pub enum CommandC<'a> {
     Download(State, ArgMatches),
