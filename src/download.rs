@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::io::{self};
 
 use anyhow::Result;
+use async_compat::Compat;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::{self, header};
@@ -14,7 +15,6 @@ use smol::io::AsyncWriteExt;
 ///
 /// Not to be used in conjunction with download_multiple_episodes
 async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
-    use async_compat::CompatExt;
     let title = truncate_title(&episode.title);
     pb.set_message(title);
     pb.set_style(
@@ -36,8 +36,8 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
             .await?,
     );
 
-    let mut download = request.send().compat().await?;
-    while let Some(chunk) = download.chunk().compat().await? {
+    let mut download = request.send().await?;
+    while let Some(chunk) = download.chunk().await? {
         let written = dest.write(&chunk).await?;
         pb.inc(written as u64);
         let title = truncate_title(&episode.title);
@@ -115,7 +115,7 @@ pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
     if episodes.len() < num_cpus {
         for episode in episodes.to_owned() {
             let pb = mp.add(ProgressBar::new(episode.size));
-            std::thread::spawn(move || smol::block_on(download_episode(pb, episode)));
+            std::thread::spawn(move || smol::block_on(Compat::new(download_episode(pb, episode))));
         }
         mp.join_and_clear()?;
         return Ok(());
@@ -125,7 +125,7 @@ pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
     for chunk in episodes.chunks(chunk_size) {
         let pb = mp.add(ProgressBar::new(0));
         let cp = chunk.to_vec();
-        std::thread::spawn(move || smol::block_on(download_multiple_episodes(pb, cp)));
+        std::thread::spawn(move || smol::block_on(Compat::new(download_multiple_episodes(pb, cp))));
     }
     mp.join_and_clear()?;
     Ok(())
