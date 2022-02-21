@@ -19,7 +19,7 @@ use async_compat::Compat;
 use command::*;
 use std::io::Write;
 
-const VERSION: &str = "0.18.0";
+const VERSION: &str = "0.18.1";
 
 fn main() -> Result<()> {
     smol::block_on(Compat::new(async {
