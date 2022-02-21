@@ -15,14 +15,13 @@ mod utils;
 
 use self::structs::*;
 use anyhow::Result;
-use async_compat::Compat;
 use command::*;
 use std::io::Write;
 
-const VERSION: &str = "0.18.1";
+const VERSION: &str = "0.19.0";
 
-fn main() -> Result<()> {
-    smol::block_on(Compat::new(async {
+#[tokio::main]
+async fn main() -> Result<()> {
         // Create
         utils::create_directories()?;
 
@@ -53,5 +52,4 @@ fn main() -> Result<()> {
         let public_state: PublicState = new_state.into();
         public_state.save()?;
         Ok(())
-    }))
 }

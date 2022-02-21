@@ -5,11 +5,10 @@ use std::collections::HashSet;
 use std::io::{self};
 
 use anyhow::Result;
-use async_compat::Compat;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::{self, header};
-use smol::io::AsyncWriteExt;
+use tokio::io::AsyncWriteExt;
 
 /// This handles downloading a single episode
 ///
@@ -28,8 +27,8 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
         request = request.header(header::RANGE, format!("bytes={}-", size));
         pb.inc(size);
     }
-    let mut dest = smol::io::BufWriter::new(
-        smol::fs::OpenOptions::new()
+    let mut dest = tokio::io::BufWriter::new(
+        tokio::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&episode.path)
@@ -74,7 +73,7 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
         pb.set_length(episode.size);
         pb.set_message(title);
         pb.set_style(ProgressStyle::default_bar().template(
-            &(format!("[{}/{}]", index, episodes.len())
+            &(format!("[{}/{}]", index+1, episodes.len())
                 + " [{eta_precise}] {msg} [{bytes_per_sec}] [{bytes}/{total_bytes}]"),
         ));
         let mut request = client.get(&episode.url);
@@ -83,8 +82,8 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
             request = request.header(header::RANGE, format!("bytes={}-", size));
             pb.inc(size);
         }
-        let mut dest = smol::io::BufWriter::new(
-            smol::fs::OpenOptions::new()
+        let mut dest = tokio::io::BufWriter::new(
+            tokio::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(&episode.path)
@@ -113,20 +112,20 @@ pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
     let mp = MultiProgress::new();
     let num_cpus = num_cpus::get();
     if episodes.len() < num_cpus {
-        for episode in episodes.to_owned() {
+        let _ = episodes.iter().map(|episode| {
             let pb = mp.add(ProgressBar::new(episode.size));
-            std::thread::spawn(move || smol::block_on(Compat::new(download_episode(pb, episode))));
-        }
+            tokio::spawn(download_episode(pb, episode.to_owned()))
+        }).collect::<Vec<_>>();
         mp.join_and_clear()?;
         return Ok(());
     }
 
     let chunk_size = episodes.len() / num_cpus;
-    for chunk in episodes.chunks(chunk_size) {
+    let _ = episodes.chunks(chunk_size).map(|chunk| {
         let pb = mp.add(ProgressBar::new(0));
         let cp = chunk.to_vec();
-        std::thread::spawn(move || smol::block_on(Compat::new(download_multiple_episodes(pb, cp))));
-    }
+        tokio::spawn(download_multiple_episodes(pb, cp.to_owned()))
+    }).collect::<Vec<_>>();
     mp.join_and_clear()?;
     Ok(())
 }
