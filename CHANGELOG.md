@@ -1,3 +1,12 @@
+0.19.0
+- Migrate from `smol` to `tokio`, makes life easier
+
+0.18.1
+- Some minor internal refactoring to clean stuff up
+
+0.18.0
+- Update a bunch of dependencies to latest version
+
 0.17.6
 - Fix mpv CLI argument to not show image popup
 
