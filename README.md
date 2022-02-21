@@ -4,7 +4,7 @@
  
 Binaries can be found here: https://github.com/njaremko/podcast/releases
 
-Otherwise, install [rustup](https://rustup.rs/), then run `cargo install podcast`
+Otherwise, use your distributions package manager to install `libiconv`, and `mpv` or `vlc`. Then install [rustup](https://rustup.rs/), and run `cargo install podcast`
  
 NOTE: Playback requires either mpv or vlc to be installed
  
