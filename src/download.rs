@@ -112,20 +112,20 @@ pub async fn download_episodes(episodes: Vec<Download>) -> Result<()> {
     let mp = MultiProgress::new();
     let num_cpus = num_cpus::get();
     if episodes.len() < num_cpus {
-        let _ = episodes.iter().map(|episode| {
+        for episode in episodes {
             let pb = mp.add(ProgressBar::new(episode.size));
-            tokio::spawn(download_episode(pb, episode.to_owned()))
-        }).collect::<Vec<_>>();
+            tokio::spawn(download_episode(pb, episode.to_owned()));
+        }
         mp.join_and_clear()?;
         return Ok(());
     }
 
     let chunk_size = episodes.len() / num_cpus;
-    let _ = episodes.chunks(chunk_size).map(|chunk| {
+    for chunk in episodes.chunks(chunk_size) {
         let pb = mp.add(ProgressBar::new(0));
         let cp = chunk.to_vec();
-        tokio::spawn(download_multiple_episodes(pb, cp.to_owned()))
-    }).collect::<Vec<_>>();
+        tokio::spawn(download_multiple_episodes(pb, cp.to_owned()));
+    }
     mp.join_and_clear()?;
     Ok(())
 }

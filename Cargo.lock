@@ -923,7 +923,7 @@ checksum = "58893f751c9b0412871a09abd62ecd2a00298c6c83befa223ef98c52aef40cbe"
 
 [[package]]
 name = "podcast"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "anyhow",
  "bloom",

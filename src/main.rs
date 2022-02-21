@@ -18,7 +18,7 @@ use anyhow::Result;
 use command::*;
 use std::io::Write;
 
-const VERSION: &str = "0.19.0";
+const VERSION: &str = "0.19.1";
 
 #[tokio::main]
 async fn main() -> Result<()> {
