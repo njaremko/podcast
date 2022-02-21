@@ -2,20 +2,21 @@ use crate::structs::*;
 use crate::utils;
 
 use std::collections::HashSet;
-use std::io::{self, BufWriter, Write};
+use std::io::{self};
 
 use anyhow::Result;
-use futures::AsyncWriteExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::{self, header};
+use smol::io::AsyncWriteExt;
 
 /// This handles downloading a single episode
 ///
 /// Not to be used in conjunction with download_multiple_episodes
 async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
+    use async_compat::CompatExt;
     let title = truncate_title(&episode.title);
-    pb.set_message(&title);
+    pb.set_message(title);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[{eta_precise}] {msg} [{bytes_per_sec}] [{bytes}/{total_bytes}]"),
@@ -27,19 +28,18 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
         request = request.header(header::RANGE, format!("bytes={}-", size));
         pb.inc(size);
     }
-    let mut dest = smol::writer(BufWriter::new(
-        std::fs::OpenOptions::new()
+    let mut dest = smol::io::BufWriter::new(
+        smol::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open(&episode.path)?,
-    ));
+            .open(&episode.path).await?);
 
-    let mut download = request.send().await?;
-    while let Some(chunk) = download.chunk().await? {
+    let mut download = request.send().compat().await?;
+    while let Some(chunk) = download.chunk().compat().await? {
         let written = dest.write(&chunk).await?;
         pb.inc(written as u64);
         let title = truncate_title(&episode.title);
-        pb.set_message(&title);
+        pb.set_message(title);
     }
     dest.flush().await?;
     pb.finish_with_message("Done");
@@ -70,7 +70,7 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
 
         pb.set_position(0);
         pb.set_length(episode.size);
-        pb.set_message(&title);
+        pb.set_message(title);
         pb.set_style(ProgressStyle::default_bar().template(
             &(format!("[{}/{}]", index, episodes.len())
                 + " [{eta_precise}] {msg} [{bytes_per_sec}] [{bytes}/{total_bytes}]"),
@@ -81,19 +81,17 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
             request = request.header(header::RANGE, format!("bytes={}-", size));
             pb.inc(size);
         }
-        let mut dest = smol::writer(BufWriter::new(
-            std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&episode.path)?,
-        ));
+        let mut dest = smol::io::BufWriter::new(smol::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&episode.path).await?);
 
         let mut download = request.send().await?;
         while let Some(chunk) = download.chunk().await? {
             let written = dest.write(&chunk).await?;
             pb.inc(written as u64);
             let title = truncate_title(&episode.title);
-            pb.set_message(&title);
+            pb.set_message(title);
         }
         dest.flush().await?;
     }
@@ -245,6 +243,7 @@ pub async fn download_all(state: &State, p_search: &str) -> Result<Vec<Download>
                 "You are about to download all episodes of {} (y/n): ",
                 podcast.title()
             );
+            use std::io::Write;
             io::stdout().flush().ok();
             let mut input = String::new();
             io::stdin().read_line(&mut input)?;

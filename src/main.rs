@@ -19,8 +19,9 @@ use command::*;
 use futures::future;
 use std::io::Write;
 use std::thread;
+use async_compat::Compat;
 
-const VERSION: &str = "0.17.6";
+const VERSION: &str = "0.18.0";
 
 fn main() -> Result<()> {
     // Same number of threads as there are CPU cores.
@@ -29,10 +30,10 @@ fn main() -> Result<()> {
     // Run the thread-local and work-stealing executor on a thread pool.
     for _ in 0..num_threads {
         // A pending future is one that simply yields forever.
-        thread::spawn(|| smol::run(future::pending::<()>()));
+        thread::spawn(|| smol::spawn(future::pending::<()>()));
     }
 
-    smol::block_on(async {
+    smol::block_on(Compat::new(async {
         // Create
         utils::create_directories()?;
 
@@ -63,5 +64,5 @@ fn main() -> Result<()> {
         let public_state: PublicState = new_state.into();
         public_state.save()?;
         Ok(())
-    })
+    }))
 }

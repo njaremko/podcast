@@ -1,4 +1,4 @@
-use clap::{App, ArgMatches};
+use clap::{Command, ArgMatches};
 
 use std::env;
 
@@ -30,7 +30,7 @@ impl<R: Read> Read for DownloadProgress<R> {
     }
 }
 
-pub async fn download(state: State, matches: &ArgMatches<'_>) -> Result<State> {
+pub async fn download(state: State, matches: &ArgMatches) -> Result<State> {
     let podcast = matches.value_of("PODCAST").unwrap();
     let mut to_download = vec![];
     match matches.value_of("EPISODE") {
@@ -90,7 +90,7 @@ pub fn play(state: State, matches: &ArgMatches) -> Result<State> {
     Ok(state)
 }
 
-pub async fn subscribe(state: State, matches: &ArgMatches<'_>) -> Result<State> {
+pub async fn subscribe(state: State, matches: &ArgMatches) -> Result<State> {
     let url = matches.value_of("URL").unwrap();
     sub(state, url).await
 }
@@ -123,7 +123,7 @@ pub fn remove(mut state: State, matches: &ArgMatches) -> Result<State> {
     Ok(state)
 }
 
-pub fn complete(app: &mut App, matches: &ArgMatches) -> Result<()> {
+pub fn complete(app: &mut Command, matches: &ArgMatches) -> Result<()> {
     match matches.value_of("SHELL") {
         Some(shell) => print_completion(app, shell),
         None => {
@@ -139,7 +139,7 @@ pub fn complete(app: &mut App, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub async fn search(state: State, matches: &ArgMatches<'_>) -> Result<State> {
+pub async fn search(state: State, matches: &ArgMatches) -> Result<State> {
     let podcast = matches
         .values_of("PODCAST")
         .unwrap()

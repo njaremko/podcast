@@ -341,8 +341,11 @@ impl Podcast {
     }
 
     #[allow(dead_code)]
-    pub fn from_url(url: &str) -> Result<Podcast> {
-        Ok(Podcast::from(Channel::from_url(url)?))
+    pub async fn from_url(url: &str) -> Result<Podcast> {
+        let content = reqwest::get(url).await?
+        .bytes()
+        .await?;
+        Ok(Podcast::from(Channel::read_from(&content[..])?))
     }
 
     pub fn from_title(title: &str) -> Result<Podcast> {

@@ -8,8 +8,8 @@ use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Write};
 
-use clap::App;
-use clap::Shell;
+use clap::Command;
+use clap_complete::{generate, Shell};
 use download::download_episodes;
 use regex::Regex;
 use reqwest;
@@ -119,23 +119,23 @@ pub fn list_subscriptions(state: &State) -> Result<()> {
     Ok(())
 }
 
-pub fn print_completion(app: &mut App, arg: &str) {
+pub fn print_completion(app: &mut Command, arg: &str) {
     let command_name = "podcast";
     match arg {
         "zsh" => {
-            app.gen_completions_to(command_name, Shell::Zsh, &mut io::stdout());
+            generate( Shell::Zsh, app, command_name, &mut io::stdout());
         }
         "bash" => {
-            app.gen_completions_to(command_name, Shell::Bash, &mut io::stdout());
+            generate( Shell::Bash, app, command_name, &mut io::stdout());
         }
         "powershell" => {
-            app.gen_completions_to(command_name, Shell::PowerShell, &mut io::stdout());
+            generate( Shell::PowerShell, app, command_name, &mut io::stdout());
         }
         "fish" => {
-            app.gen_completions_to(command_name, Shell::Fish, &mut io::stdout());
+            generate( Shell::Fish, app, command_name, &mut io::stdout());
         }
         "elvish" => {
-            app.gen_completions_to(command_name, Shell::Elvish, &mut io::stdout());
+            generate( Shell::Elvish, app, command_name, &mut io::stdout());
         }
         other => {
             println!("Completions are not available for {}", other);
