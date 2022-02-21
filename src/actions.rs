@@ -2,18 +2,15 @@ use crate::download;
 use crate::structs::*;
 use crate::utils;
 use anyhow::Result;
-
-use futures::prelude::*;
-use std::collections::HashSet;
-use std::fs::{self, File};
-use std::io::{self, BufReader, BufWriter, Write};
-
-use clap::Command;
 use clap_complete::{generate, Shell};
 use download::download_episodes;
+use futures::prelude::*;
 use regex::Regex;
 use reqwest;
 use rss::Channel;
+use std::collections::HashSet;
+use std::fs::{self, File};
+use std::io::{self, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
 pub fn list_episodes(search: &str) -> Result<()> {
@@ -119,23 +116,24 @@ pub fn list_subscriptions(state: &State) -> Result<()> {
     Ok(())
 }
 
-pub fn print_completion(app: &mut Command, arg: &str) {
+pub fn print_completion(state: &State, arg: &str) {
     let command_name = "podcast";
+    let mut app = crate::parser::get_app(&state.version);
     match arg {
         "zsh" => {
-            generate(Shell::Zsh, app, command_name, &mut io::stdout());
+            generate(Shell::Zsh, &mut app, command_name, &mut io::stdout());
         }
         "bash" => {
-            generate(Shell::Bash, app, command_name, &mut io::stdout());
+            generate(Shell::Bash, &mut app, command_name, &mut io::stdout());
         }
         "powershell" => {
-            generate(Shell::PowerShell, app, command_name, &mut io::stdout());
+            generate(Shell::PowerShell, &mut app, command_name, &mut io::stdout());
         }
         "fish" => {
-            generate(Shell::Fish, app, command_name, &mut io::stdout());
+            generate(Shell::Fish, &mut app, command_name, &mut io::stdout());
         }
         "elvish" => {
-            generate(Shell::Elvish, app, command_name, &mut io::stdout());
+            generate(Shell::Elvish, &mut app, command_name, &mut io::stdout());
         }
         other => {
             println!("Completions are not available for {}", other);

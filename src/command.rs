@@ -1,21 +1,21 @@
 use crate::{executor, structs::State};
 use anyhow::Result;
-use clap::{ArgMatches, Command};
+use clap::ArgMatches;
 
-pub enum CommandC<'a> {
+pub enum CommandC {
     Download(State, ArgMatches),
     List(State, ArgMatches),
     Play(State, ArgMatches),
     Subscribe(State, ArgMatches),
     Search(State, ArgMatches),
     Remove(State, ArgMatches),
-    Complete(State, Command<'a>, ArgMatches),
+    Complete(State, ArgMatches),
     Refresh(State),
     Update(State),
     NoMatch(State),
 }
 
-pub fn parse_command<'a>(state: State, app: Command<'a>, matches: ArgMatches) -> CommandC<'a> {
+pub fn parse_command(state: State, matches: ArgMatches) -> CommandC {
     let state_copy = state.clone();
     matches
         .subcommand_name()
@@ -47,7 +47,6 @@ pub fn parse_command<'a>(state: State, app: Command<'a>, matches: ArgMatches) ->
             "rm" => CommandC::Remove(state, matches.subcommand_matches("rm").unwrap().clone()),
             "completion" => CommandC::Complete(
                 state,
-                app,
                 matches.subcommand_matches("completion").unwrap().clone(),
             ),
             "refresh" => CommandC::Refresh(state),
@@ -57,7 +56,7 @@ pub fn parse_command<'a>(state: State, app: Command<'a>, matches: ArgMatches) ->
         .unwrap_or_else(|| CommandC::NoMatch(state_copy))
 }
 
-pub async fn run_command<'a>(command: CommandC<'a>) -> Result<State> {
+pub async fn run_command(command: CommandC) -> Result<State> {
     match command {
         CommandC::Download(state, matches) => executor::download(state, &matches).await,
         CommandC::List(state, matches) => executor::list(state, &matches),
@@ -65,10 +64,7 @@ pub async fn run_command<'a>(command: CommandC<'a>) -> Result<State> {
         CommandC::Subscribe(state, matches) => executor::subscribe(state, &matches).await,
         CommandC::Search(state, matches) => executor::search(state, &matches).await,
         CommandC::Remove(state, matches) => executor::remove(state, &matches),
-        CommandC::Complete(state, mut app, matches) => {
-            executor::complete(&mut app, &matches)?;
-            Ok(state)
-        }
+        CommandC::Complete(state, matches) => executor::complete(state, &matches),
         CommandC::Refresh(mut state) => {
             state.update_rss().await?;
             Ok(state)

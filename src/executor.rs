@@ -1,16 +1,13 @@
-use clap::{ArgMatches, Command};
-
-use std::env;
-
 use crate::actions::*;
 use crate::download;
 use crate::playback;
 use crate::{structs::*, utils};
 use anyhow::Result;
+use clap::ArgMatches;
+use download::download_episodes;
 use indicatif::ProgressBar;
 use regex::Regex;
-
-use download::download_episodes;
+use std::env;
 use std::{
     io::{self, Read, Write},
     path::Path,
@@ -123,20 +120,20 @@ pub fn remove(mut state: State, matches: &ArgMatches) -> Result<State> {
     Ok(state)
 }
 
-pub fn complete(app: &mut Command, matches: &ArgMatches) -> Result<()> {
+pub fn complete(state: State, matches: &ArgMatches) -> Result<State> {
     match matches.value_of("SHELL") {
-        Some(shell) => print_completion(app, shell),
+        Some(shell) => print_completion(&state, shell),
         None => {
             let shell_path_env = env::var("SHELL");
             if let Ok(p) = shell_path_env {
                 let shell_path = Path::new(&p);
                 if let Some(shell) = shell_path.file_name() {
-                    print_completion(app, shell.to_str().unwrap())
+                    print_completion(&state, shell.to_str().unwrap())
                 }
             }
         }
     }
-    Ok(())
+    Ok(state)
 }
 
 pub async fn search(state: State, matches: &ArgMatches) -> Result<State> {

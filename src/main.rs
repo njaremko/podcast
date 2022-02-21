@@ -39,7 +39,7 @@ fn main() -> Result<()> {
 
         // Run CLI parser and get matches
         let app = parser::get_app(&VERSION);
-        let matches = app.clone().get_matches();
+        let matches = app.get_matches();
 
         // Has the user specified that they want the CLI to do minimal output?
         let is_quiet = matches.occurrences_of("quiet") != 0;
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
         let state = State::new(VERSION, config).await?;
 
         // Parse the state and provided arguments into a command to be run
-        let command = parse_command(state, app, matches);
+        let command = parse_command(state, matches);
 
         // After running the given command, we return a new state to persist
         let new_state = run_command(command).await?;
