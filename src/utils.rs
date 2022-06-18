@@ -5,8 +5,8 @@ use std::io::{BufReader, Write};
 use std::path::PathBuf;
 
 use anyhow::Result;
-use dirs;
-use reqwest;
+
+
 use rss::Channel;
 
 const UNSUBSCRIBE_NOTE: &str = "Note: this does NOT delete any downloaded podcasts";
@@ -45,7 +45,7 @@ pub fn get_podcast_dir() -> Result<PathBuf> {
 pub fn append_extension(filename: &str, ext: &str) -> String {
     let mut f = filename.to_string();
     if !f.ends_with('.') {
-        f.push_str(".");
+        f.push('.');
     }
     f.push_str(ext);
     f

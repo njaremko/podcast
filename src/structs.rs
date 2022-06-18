@@ -13,7 +13,7 @@ use regex::Regex;
 use reqwest::header;
 use rss::{Channel, Item};
 use semver_parser::version;
-use serde_json;
+
 use std::path::PathBuf;
 
 #[cfg(target_os = "macos")]
@@ -129,9 +129,9 @@ impl From<ParseState> for State {
     fn from(internal_state: ParseState) -> Self {
         State {
             version: internal_state.version.unwrap(),
-            last_run_time: internal_state.last_run_time.unwrap_or_else(|| Utc::now()),
-            config: internal_state.config.unwrap_or_else(|| Config::default()),
-            subscriptions: internal_state.subscriptions.unwrap_or_else(|| vec![]),
+            last_run_time: internal_state.last_run_time.unwrap_or_else(Utc::now),
+            config: internal_state.config.unwrap_or_default(),
+            subscriptions: internal_state.subscriptions.unwrap_or_default(),
             client: reqwest::Client::new(),
         }
     }
@@ -220,7 +220,7 @@ impl State {
         println!("Checking for new episodes...");
         let mut d_vec = vec![];
         for (index, sub) in self.subscriptions.iter().enumerate() {
-            d_vec.push(update_subscription(&self, index, sub, &self.config));
+            d_vec.push(update_subscription(self, index, sub, &self.config));
         }
         let new_subscriptions = futures::future::join_all(d_vec).await;
         for c in &new_subscriptions {
@@ -256,7 +256,7 @@ impl State {
                 return Ok(());
             }
         };
-        let remote_version = match version::parse(&latest) {
+        let remote_version = match version::parse(latest) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("Failed to parse version {}: {}", &self.version, e);
@@ -290,10 +290,10 @@ impl Download {
         utils::create_dir_if_not_exist(&path)?;
         let pattern = state.config.filename_pattern.as_ref();
         if let (Some(title), Some(url)) = (episode.title(), episode.url()) {
-            let mut filename = "".to_string();
+            let mut filename;
             if let Some(pattern) = pattern {
                 filename = pattern.replace("{title}", &title);
-                filename = pattern.replace(
+                filename = filename.replace(
                     "{number}",
                     &podcast
                         .episodes()
@@ -377,7 +377,7 @@ impl Podcast {
 
     pub fn episodes(&self) -> Vec<Episode> {
         let mut result = Vec::new();
-        for item in self.0.items().to_owned() {
+        for item in self.0.items().iter().cloned() {
             result.push(Episode::from(item));
         }
         result

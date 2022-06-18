@@ -1,6 +1,6 @@
 use clap::{Arg, Command};
 
-pub fn get_app<'a, 'b>(version: &'a str) -> Command {
+pub fn get_app(version: &str) -> Command {
     Command::new("podcast")
         .version(version)
         .author("Nathan J. <njaremko@gmail.com>")

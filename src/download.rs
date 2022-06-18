@@ -73,7 +73,7 @@ async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) ->
         pb.set_length(episode.size);
         pb.set_message(title);
         pb.set_style(ProgressStyle::default_bar().template(
-            &(format!("[{}/{}]", index+1, episodes.len())
+            &(format!("[{}/{}]", index + 1, episodes.len())
                 + " [{eta_precise}] {msg} [{bytes_per_sec}] [{bytes}/{total_bytes}]"),
         ));
         let mut request = client.get(&episode.url);
@@ -148,7 +148,7 @@ pub async fn download_range(
                 path.push(podcast.title());
                 utils::create_dir_if_not_exist(&path)?;
                 let episode = &episodes[episodes.len() - ep_num];
-                if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
+                if let Some(ep) = Download::new(state, &podcast, episode).await? {
                     downloads.push(ep);
                 }
             }
@@ -181,7 +181,7 @@ pub async fn download_episode_by_num(
                 let podcast = Podcast::from_title(&subscription.title)?;
                 let episodes = podcast.episodes();
                 if let Some(ep) =
-                    Download::new(&state, &podcast, &episodes[episodes.len() - ep_num]).await?
+                    Download::new(state, &podcast, &episodes[episodes.len() - ep_num]).await?
                 {
                     downloads.push(ep);
                 }
@@ -221,13 +221,13 @@ pub async fn download_episode_by_name(
 
             if download_all {
                 for episode in filtered_episodes {
-                    if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
+                    if let Some(ep) = Download::new(state, &podcast, episode).await? {
                         downloads.push(ep);
                     }
                 }
             } else {
                 for episode in filtered_episodes.take(1) {
-                    if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
+                    if let Some(ep) = Download::new(state, &podcast, episode).await? {
                         downloads.push(ep);
                     }
                 }
@@ -258,14 +258,14 @@ pub async fn download_all(state: &State, p_search: &str) -> Result<Vec<Download>
             let mut path = utils::get_podcast_dir()?;
             path.push(podcast.title());
 
-            for downloaded in utils::already_downloaded(podcast.title()) {
+            if let Ok(downloaded) = utils::already_downloaded(podcast.title()) {
                 let episodes = podcast.episodes();
                 for e in episodes
                     .iter()
                     .filter(|e| e.title().is_some())
                     .filter(|e| !downloaded.contains(&e.title().unwrap()))
                 {
-                    if let Some(ep) = Download::new(&state, &podcast, &e).await? {
+                    if let Some(ep) = Download::new(state, &podcast, e).await? {
                         downloads.push(ep);
                     }
                 }
@@ -284,7 +284,7 @@ pub async fn download_latest(
     if let Some(podcast) = find_matching_podcast(state, p_search)? {
         let episodes = podcast.episodes();
         for episode in &episodes[..latest] {
-            if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
+            if let Some(ep) = Download::new(state, &podcast, episode).await? {
                 downloads.push(ep);
             }
         }
@@ -309,7 +309,7 @@ pub async fn download_rss(state: &State, url: &str) -> Result<Vec<Download>> {
         }
 
         for episode in episodes[..download_limit].iter() {
-            if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
+            if let Some(ep) = Download::new(state, &podcast, episode).await? {
                 downloads.push(ep);
             }
         }

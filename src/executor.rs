@@ -187,10 +187,10 @@ pub async fn search(state: State, matches: &ArgMatches) -> Result<State> {
 
     let rss_resp = &resp.results[n];
     match &rss_resp.feed_url {
-        Some(r) => sub(state, &r).await,
+        Some(r) => sub(state, r).await,
         None => {
             eprintln!("Subscription failed. No url in API response.");
-            return Ok(state);
+            Ok(state)
         }
     }
 }

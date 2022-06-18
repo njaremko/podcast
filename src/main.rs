@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
         utils::create_directories()?;
 
         // Run CLI parser and get matches
-        let app = parser::get_app(&VERSION);
+        let app = parser::get_app(VERSION);
         let matches = app.get_matches();
 
         // Has the user specified that they want the CLI to do minimal output?

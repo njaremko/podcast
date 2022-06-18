@@ -6,7 +6,7 @@ use clap_complete::{generate, Shell};
 use download::download_episodes;
 use futures::prelude::*;
 use regex::Regex;
-use reqwest;
+
 use rss::Channel;
 use std::collections::HashSet;
 use std::fs::{self, File};
@@ -82,7 +82,7 @@ pub async fn update_subscription(
                     .iter()
                     .rev()
                     .take(subscription_limit as usize)
-                    .map(|ep| Download::new(&state, &podcast, &ep));
+                    .map(|ep| Download::new(state, &podcast, ep));
 
                 stream::iter(download_futures)
                     .filter_map(|download| async move { download.await.ok() })
@@ -93,7 +93,7 @@ pub async fn update_subscription(
             None => {
                 let download_futures = episodes
                     .iter()
-                    .map(|ep| Download::new(&state, &podcast, &ep));
+                    .map(|ep| Download::new(state, &podcast, ep));
 
                 stream::iter(download_futures)
                     .filter_map(|download| async move { download.await.ok() })
