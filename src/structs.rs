@@ -29,11 +29,12 @@ lazy_static! {
 
 /// This information is persisted to disk as part of PublicState
 /// and allows for configuration of the CLI
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
     pub auto_download_limit: Option<i64>,
     pub download_subscription_limit: Option<i64>,
     pub quiet: Option<bool>,
+    pub filename_pattern: Option<String>,
 }
 
 impl Default for Config {
@@ -42,6 +43,7 @@ impl Default for Config {
             auto_download_limit: Some(1),
             download_subscription_limit: Some(1),
             quiet: Some(false),
+            filename_pattern: Some("{number}-{title}".to_string()),
         }
     }
 }
@@ -286,11 +288,28 @@ impl Download {
         let mut path = utils::get_podcast_dir()?;
         path.push(podcast.title());
         utils::create_dir_if_not_exist(&path)?;
-        if let (Some(mut title), Some(url)) = (episode.title(), episode.url()) {
-            if let Some(ext) = episode.extension() {
-                title = utils::append_extension(&title, &ext);
+        let pattern = state.config.filename_pattern.as_ref();
+        if let (Some(title), Some(url)) = (episode.title(), episode.url()) {
+            let mut filename = "".to_string();
+            if let Some(pattern) = pattern {
+                filename = pattern.replace("{title}", &title);
+                filename = pattern.replace(
+                    "{number}",
+                    &podcast
+                        .episodes()
+                        .iter()
+                        .position(|e| e == episode)
+                        .map(|x| x.to_string())
+                        .unwrap_or_else(|| "".into()),
+                );
+            } else {
+                filename = title.clone();
             }
-            path.push(&title);
+
+            if let Some(ext) = episode.extension() {
+                filename = utils::append_extension(&filename, &ext);
+            }
+            path.push(&filename);
 
             let head_resp = state.client.head(url).send().await?;
             let total_size = head_resp
