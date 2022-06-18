@@ -37,28 +37,30 @@ pub fn get_app(version: &str) -> Command {
                         .required(false),
                 )
                 .arg(
-                    Arg::new("name")
+                    Arg::new("NAME")
                         .short('e')
                         .long("episode")
                         .help("Download using episode name instead of index number")
                         .required(false),
                 )
                 .arg(
-                    Arg::new("pattern")
+                    Arg::new("PATTERN")
                         .short('p')
                         .long("pattern")
                         .help("Download episode names matching the given regex string")
+                        .takes_value(true)
                         .required(false),
                 )
                 .arg(
-                    Arg::new("template")
+                    Arg::new("TEMPLATE")
                         .short('t')
                         .long("template")
                         .help("Name the downloaded file according to the provided template. Supports {title} and {number}.")
+                        .takes_value(true)
                         .required(false),
                 )
                 .arg(
-                    Arg::new("all")
+                    Arg::new("ALL")
                         .short('a')
                         .long("all")
                         .help("Download all matching episodes")

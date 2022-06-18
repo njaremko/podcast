@@ -1,7 +1,13 @@
-0.19.3
+0.19.4
 - Updating dependencies
 - Adding the ability to configure file name templates, initially supporting `{title}` and `{number}`
-- Add the ability to download episodes matching a regex using `podcast download <podcast name> -p ".*goldfish.*"`
+```sh
+podcast download <podcast name> --template "{title}-{number}"
+```
+- Add the ability to download episodes matching a regex using 
+```sh
+podcast download <podcast name> --pattern ".*goldfish.*"
+```
 
 0.19.0
 - Migrate from `smol` to `tokio`, makes life easier

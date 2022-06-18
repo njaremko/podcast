@@ -5,6 +5,7 @@ extern crate lazy_static;
 extern crate serde;
 
 mod actions;
+mod cargo_parser;
 mod command;
 mod download;
 mod executor;
@@ -18,15 +19,16 @@ use anyhow::Result;
 use command::*;
 use std::io::Write;
 
-const VERSION: &str = "0.19.3";
-
 #[tokio::main]
 async fn main() -> Result<()> {
     // Create
     utils::create_directories()?;
 
+    // Parse the CLI version from the Cargo.toml file
+    let version = cargo_parser::get_cli_version()?;
+
     // Run CLI parser and get matches
-    let app = parser::get_app(VERSION);
+    let app = parser::get_app(&version);
     let matches = app.get_matches();
 
     // Has the user specified that they want the CLI to do minimal output?
@@ -40,7 +42,7 @@ async fn main() -> Result<()> {
     }
 
     // Instantiate the global state of the application
-    let state = State::new(VERSION, config).await?;
+    let state = State::new(&version, config).await?;
 
     // Parse the state and provided arguments into a command to be run
     let command = parse_command(state, matches);
