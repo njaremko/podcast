@@ -91,9 +91,7 @@ pub async fn update_subscription(
                     .await
             }
             None => {
-                let download_futures = episodes
-                    .iter()
-                    .map(|ep| Download::new(state, &podcast, ep));
+                let download_futures = episodes.iter().map(|ep| Download::new(state, &podcast, ep));
 
                 stream::iter(download_futures)
                     .filter_map(|download| async move { download.await.ok() })

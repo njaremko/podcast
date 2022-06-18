@@ -140,14 +140,46 @@ pub async fn download_range(
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
+
+            let mut path = utils::get_podcast_dir()?;
+            path.push(podcast.title());
+            utils::create_dir_if_not_exist(&path)?;
+
             let episodes = podcast.episodes();
             let episodes_to_download = parse_download_episodes(e_search)?;
-
             for ep_num in episodes_to_download {
-                let mut path = utils::get_podcast_dir()?;
-                path.push(podcast.title());
-                utils::create_dir_if_not_exist(&path)?;
                 let episode = &episodes[episodes.len() - ep_num];
+                if let Some(ep) = Download::new(state, &podcast, episode).await? {
+                    downloads.push(ep);
+                }
+            }
+        }
+    }
+    Ok(downloads)
+}
+
+pub async fn download_matching(
+    state: &State,
+    p_search: &str,
+    e_search: &Regex,
+) -> Result<Vec<Download>> {
+    let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
+    let mut downloads = vec![];
+    for subscription in &state.subscriptions {
+        if re_pod.is_match(&subscription.title) {
+            let podcast = Podcast::from_title(&subscription.title)?;
+
+            let mut path = utils::get_podcast_dir()?;
+            path.push(podcast.title());
+            utils::create_dir_if_not_exist(&path)?;
+
+            let episodes = podcast.episodes();
+            let episodes_to_download: Vec<&Episode> = episodes
+                .iter()
+                .filter(|ep| ep.title().map(|t| e_search.is_match(&t)).unwrap_or(false))
+                .collect();
+
+            for episode in episodes_to_download {
                 if let Some(ep) = Download::new(state, &podcast, episode).await? {
                     downloads.push(ep);
                 }

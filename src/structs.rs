@@ -298,8 +298,9 @@ impl Download {
                     &podcast
                         .episodes()
                         .iter()
+                        .rev()
                         .position(|e| e == episode)
-                        .map(|x| x.to_string())
+                        .map(|x| (x + 1).to_string())
                         .unwrap_or_else(|| "".into()),
                 );
             } else {

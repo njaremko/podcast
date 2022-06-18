@@ -28,16 +28,26 @@ impl<R: Read> Read for DownloadProgress<R> {
 }
 
 pub async fn download(state: State, matches: &ArgMatches) -> Result<State> {
+    let mut mutable_state = state.clone();
     let podcast = matches.value_of("PODCAST").unwrap();
+    if let Some(template) = matches.value_of("template") {
+        mutable_state.config.filename_pattern = Some(template.to_string());
+    }
     let mut to_download = vec![];
     match matches.value_of("EPISODE") {
         Some(ep) => {
-            if String::from(ep).contains(|c| c == '-' || c == ',') {
-                to_download.append(&mut download::download_range(&state, podcast, ep).await?);
+            if let Some(pattern) = matches.value_of("pattern") {
+                let regex = Regex::new(pattern)?;
+                to_download.append(
+                    &mut download::download_matching(&mutable_state, podcast, &regex).await?,
+                )
+            } else if String::from(ep).contains(|c| c == '-' || c == ',') {
+                to_download
+                    .append(&mut download::download_range(&mutable_state, podcast, ep).await?);
             } else if matches.occurrences_of("name") > 0 {
                 to_download.append(
                     &mut download::download_episode_by_name(
-                        &state,
+                        &mutable_state,
                         podcast,
                         ep,
                         0 < matches.occurrences_of("all"),
@@ -45,18 +55,20 @@ pub async fn download(state: State, matches: &ArgMatches) -> Result<State> {
                     .await?,
                 );
             } else {
-                to_download
-                    .append(&mut download::download_episode_by_num(&state, podcast, ep).await?);
+                to_download.append(
+                    &mut download::download_episode_by_num(&mutable_state, podcast, ep).await?,
+                );
             }
         }
         None => match matches.value_of("latest") {
             Some(num_of_latest) => {
                 to_download.append(
-                    &mut download::download_latest(&state, podcast, num_of_latest.parse()?).await?,
+                    &mut download::download_latest(&mutable_state, podcast, num_of_latest.parse()?)
+                        .await?,
                 );
             }
             None => {
-                to_download.append(&mut download::download_all(&state, podcast).await?);
+                to_download.append(&mut download::download_all(&mutable_state, podcast).await?);
             }
         },
     }

@@ -6,7 +6,6 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-
 use rss::Channel;
 
 const UNSUBSCRIBE_NOTE: &str = "Note: this does NOT delete any downloaded podcasts";
