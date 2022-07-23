@@ -3,3 +3,5 @@
 /rls/
 **/*.rs.bk
 *.mp3
+.ignore
+.pijul

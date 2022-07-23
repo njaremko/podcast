@@ -100,9 +100,18 @@ $ sudo mv podcast.fish /usr/share/fish/completions
 ```
 
 # Building
+
+### Git
 Building requires nightly rust
 ```sh
 git clone git@github.com:njaremko/podcast.git
+cd podcast
+cargo install --path=. --force
+```
+
+### Pijul
+```sh
+pijul clone https://nest.pijul.com/njaremko/podcast
 cd podcast
 cargo install --path=. --force
 ```
