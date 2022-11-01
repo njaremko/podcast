@@ -12,7 +12,9 @@ use std::path::PathBuf;
 
 fn launch_player(url: &str) -> Result<()> {
     if launch_mpv(url).is_err() {
-        return launch_vlc(url);
+        if launch_vlc(url).is_err() {
+            return launch_sox(url);
+        }
     }
     Ok(())
 }
@@ -39,7 +41,22 @@ fn launch_vlc(url: &str) -> Result<()> {
         let stderr = io::stderr();
         let mut handle = stderr.lock();
         match err.kind() {
-            io::ErrorKind::NotFound => writeln!(&mut handle, "Couldn't open vlc...aborting").ok(),
+            io::ErrorKind::NotFound => {
+                writeln!(&mut handle, "Couldn't open vlc\nTrying sox...").ok()
+            }
+            _ => writeln!(&mut handle, "Error: {}", err).ok(),
+        };
+    }
+    Ok(())
+}
+
+fn launch_sox(url: &str) -> Result<()> {
+    let c: Vec<&str> = url.split('?').take(1).collect();
+    if let Err(err) = Command::new("play").args(&[c[0]]).status() {
+        let stderr = io::stderr();
+        let mut handle = stderr.lock();
+        match err.kind() {
+            io::ErrorKind::NotFound => writeln!(&mut handle, "Couldn't open sox...aborting").ok(),
             _ => writeln!(&mut handle, "Error: {}", err).ok(),
         };
     }
@@ -92,10 +109,12 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
                 let episode = episodes[episodes.len() - ep_num].clone();
 
                 filename = episode.title().unwrap();
+                filename.push('.');
                 filename.push_str(&episode.extension().unwrap());
                 path = get_podcast_dir()?;
                 path.push(podcast.title());
                 path.push(filename);
+
                 if path.exists() {
                     launch_player(path.to_str().unwrap())?;
                 } else {
