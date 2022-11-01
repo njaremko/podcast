@@ -1,28 +1,31 @@
- # podcast
- ---
+# podcast
+
+---
+
 `podcast` is a command line podcast manager and player.
- 
+
 Binaries can be found here: https://github.com/njaremko/podcast/releases
 
-Otherwise, use your distributions package manager to install `libiconv`, and `mpv` or `vlc`. Then install [rustup](https://rustup.rs/), and run `cargo install podcast`
- 
+Otherwise, use your distributions package manager to install `libiconv`, and `mpv` or `vlc` or `sox`. Then install [rustup](https://rustup.rs/), and run `cargo install podcast`
+
 NOTE: Playback requires either mpv or vlc to be installed
- 
+
 It currently supports:
+
 - [x] Subscribing to RSS feeds
 - [x] Searching for podcasts
 - [x] Unsubscribing from RSS feeds
 - [x] Streaming podcasts
-- [x] Parallel downloading of multiple podcasts 
+- [x] Parallel downloading of multiple podcasts
 - [x] Playing podcasts
 - [x] Auto-download new episodes
 - [x] Automatically check for updates
 - [x] Shell Completions
-    - [x] zsh
-    - [x] bash
-    - [x] fish
-    - [x] powershell
-    - [x] elvish
+  - [x] zsh
+  - [x] bash
+  - [x] fish
+  - [x] powershell
+  - [x] elvish
 
 By default, podcasts are downloaded to `$HOME/Podcasts`, but this folder can be set with the `$PODCAST` environmental variable.
 
@@ -38,10 +41,11 @@ Multiple: `podcast download $podcast_name 1,5,9-12,14`
 
 All: `podcast download $podcast_name`
 
-You can also use a portion of the name. 
+You can also use a portion of the name.
 Podcast will pick the first podcast alphabetically that contains the given word (Case-Insensitive).
 
 # Example Usage:
+
 ```sh
 $ podcast search my brother my brother and me
 Using PODCAST dir: "/Users/jaremn/Podcasts"
@@ -89,6 +93,7 @@ Using PODCAST dir: "/Users/jaremn/Podcasts"
 ```
 
 # Generating completions:
+
 ```sh
 # Generating completion for current shell:
 $ podcast completion
@@ -102,7 +107,9 @@ $ sudo mv podcast.fish /usr/share/fish/completions
 # Building
 
 ### Git
+
 Building requires nightly rust
+
 ```sh
 git clone git@github.com:njaremko/podcast.git
 cd podcast
@@ -110,6 +117,7 @@ cargo install --path=. --force
 ```
 
 ### Pijul
+
 ```sh
 pijul clone https://nest.pijul.com/njaremko/podcast
 cd podcast
