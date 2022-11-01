@@ -51,15 +51,23 @@ fn launch_vlc(url: &str) -> Result<()> {
 }
 
 fn launch_sox(url: &str) -> Result<()> {
-    let c: Vec<&str> = url.split('?').take(1).collect();
-    if let Err(err) = Command::new("play").args(&[c[0]]).status() {
+    if let Some(cleaned_url) = url.split('?').take(1).next() {
+        if let Err(err) = Command::new("play").args(&[cleaned_url]).status() {
+            let stderr = io::stderr();
+            let mut handle = stderr.lock();
+            match err.kind() {
+                io::ErrorKind::NotFound => {
+                    writeln!(&mut handle, "Couldn't open sox...aborting").ok()
+                }
+                _ => writeln!(&mut handle, "Error: {}", err).ok(),
+            };
+        }
+    } else {
         let stderr = io::stderr();
         let mut handle = stderr.lock();
-        match err.kind() {
-            io::ErrorKind::NotFound => writeln!(&mut handle, "Couldn't open sox...aborting").ok(),
-            _ => writeln!(&mut handle, "Error: {}", err).ok(),
-        };
+        writeln!(&mut handle, "Given filename '{}' couldn't be parsed", url).ok();
     }
+
     Ok(())
 }
 
