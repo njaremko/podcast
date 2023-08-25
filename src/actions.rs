@@ -33,9 +33,10 @@ pub fn list_episodes(search: &str) -> Result<()> {
                 .for_each(|(num, ep)| {
                     writeln!(
                         &mut handle,
-                        "({}) {}",
+                        "({}) {} [{}]",
                         episodes.len() - num,
-                        ep.title().unwrap()
+                        ep.title().unwrap(),
+                        ep.duration().unwrap()
                     )
                     .ok();
                 });
