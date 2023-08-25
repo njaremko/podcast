@@ -410,6 +410,10 @@ impl Episode {
         }
     }
 
+    pub fn duration(&self) -> Option<&str> {
+        self.0.itunes_ext()?.duration()
+    }
+
     pub fn extension(&self) -> Option<String> {
         match self.0.enclosure()?.mime_type() {
             "audio/mpeg" => Some("mp3".into()),
